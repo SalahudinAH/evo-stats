@@ -38,7 +38,7 @@ export function Progress({ nav }: { nav: Nav }) {
   if (weightLog) {
     return (
       <div className="screen">
-        <header className="screen-head"><button className="back" onClick={() => setWeightLog(false)}>‹ Progress</button></header>
+        <header className="screen-head"><button className="back" onClick={() => { setWeightLog(false); weights.reload() }}>‹ Progress</button></header>
         <WeightScreen api={nav.api} notify={nav.notify} />
       </div>
     )
