@@ -1,0 +1,25 @@
+# Backup for the daily weight Shortcut: pings the database every 3 days so the
+# free Supabase project never pauses for inactivity.
+name: Keep database awake
+
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    if: vars.SUPABASE_URL != ''
+    steps:
+      - name: Ping Supabase
+        env:
+          RAW_URL: ${{ vars.SUPABASE_URL }}
+          KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          # Keep only https://<project>.supabase.co, even if a path was pasted.
+          BASE=$(printf '%s' "$RAW_URL" | tr -d '[:space:]"' | sed -E 's#^(https?://[^/]+).*#\1#')
+          curl -fsS -X POST "$BASE/rest/v1/rpc/ping" \
+            -H "apikey: $KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}'
