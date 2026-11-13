@@ -527,3 +527,25 @@ a.pill-btn { text-decoration: none; }
 .nav-bar:has(> .nav-back) { justify-content: space-between; }
 .nav-back { appearance: none; border: 0; background: none; color: var(--accent-text); font-size: 17px; height: 44px; padding: 0 10px 0 2px; margin-right: auto; display: inline-flex; align-items: center; gap: 2px; cursor: pointer; white-space: nowrap; }
 
+
+/* Home-screen iPhone still on the see-through status bar (see lib/standalone.ts). */
+html.ios-short, html.ios-short body { background: #161616; }
+html.ios-short .app { background: var(--bg); }
+html.ios-short .tabbar { padding-bottom: 4px; background: #161616; }
+html.ios-short main.no-tabbar { padding-bottom: 24px; }
+html.ios-short .sheet { padding-bottom: 18px; }
+html.ios-short .rest-pill { bottom: 16px; }
+
+/* Live busyness (EVO Visits) */
+.busy-card { gap: 10px; padding: 14px; }
+.busy-pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; font-size: 15px; }
+.busy-pill i { width: 8px; height: 8px; border-radius: 4px; display: inline-block; }
+.busy-day { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; align-items: end; }
+.busy-col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.busy-bar { width: 100%; height: 44px; background: var(--surface-2); border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
+.busy-bar span { width: 100%; background: #5a5a5e; border-radius: 6px 6px 0 0; }
+.busy-col.future .busy-bar span { background: repeating-linear-gradient(135deg, #48484a 0 4px, #3a3a3c 4px 8px); }
+.busy-col.current .busy-lbl { color: var(--text); font-weight: 650; }
+.busy-lbl { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.grid3 .btn { padding-left: 6px; padding-right: 6px; }

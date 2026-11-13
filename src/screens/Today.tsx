@@ -8,6 +8,7 @@ import { Check, ChevronRight, Dumbbell, Flame, MapPin, Play, Star, Users } from 
 import { CENTRES, googleMapsUrl } from '../lib/evoCentres'
 import { distanceMeters, hourlyPattern } from '../lib/stats'
 import { openMoreSub } from './More'
+import { BusyDay, busyLine, BusyPill, useBusyness } from '../components/LiveBusy'
 import { fmtClock, fmtDuration, LargeTitle, Ring, Row, Section, Spark } from '../components/ui'
 import { dayRange, sumMacros } from './Food'
 
@@ -28,6 +29,7 @@ export function Today({ nav }: { nav: Nav }) {
   const mainCentre = favorite ? CENTRES.find(c => distanceMeters(favorite.lat, favorite.lng, c.lat, c.lng) < 250) ?? null : null
   const busyUrl = mainCentre ? googleMapsUrl(mainCentre)
     : favorite ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(favorite.name)}` : null
+  const live = useBusyness(api, mainCentre?.visitsId)
   const usualHours = (() => {
     if (!favorite) return null
     const p = hourlyPattern(visits.data ?? [], favorite.name)
@@ -119,9 +121,13 @@ export function Today({ nav }: { nav: Nav }) {
           sub={checkedIn ? (lastVisit.source === 'manual' ? 'Checked in by you' : 'Checked in automatically') : 'Shortcuts check you in on arrival'}
           trail={checkedIn ? undefined : <button className="pill-btn" onClick={checkIn} disabled={busy}>{busy ? '…' : 'Check in'}</button>} />
         {favorite ? (
-          <Row icon={<Star size={17} strokeWidth={2} fill="currentColor" />} title={favorite.name}
-            sub={usualHours ? `Main centre · ${usualHours.replace('You usually', 'usually')}` : 'Main centre'}
-            trail={busyUrl ? <a className="pill-btn" href={busyUrl} target="_blank" rel="noreferrer"><Users size={14} strokeWidth={2.4} />How busy?</a> : undefined} />
+          <>
+            <Row icon={<Star size={17} strokeWidth={2} fill="currentColor" />} title={favorite.name}
+              sub={busyLine(live) ?? (usualHours ? `Main centre · ${usualHours.replace('You usually', 'usually')}` : 'Main centre')}
+              trail={live.status === 'ok' ? <BusyPill state={live} />
+                : busyUrl ? <a className="pill-btn" href={busyUrl} target="_blank" rel="noreferrer"><Users size={14} strokeWidth={2.4} />How busy?</a> : undefined} />
+            {live.status === 'ok' && <div className="group-block" style={{ paddingTop: 4 }}><BusyDay data={live.data} /></div>}
+          </>
         ) : clubs.data && (
           <Row icon={<Star size={17} strokeWidth={2} />} title="Choose your main centre" sub="See how busy it is from here" chevron onClick={openCentres} />
         )}

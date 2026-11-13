@@ -5,6 +5,7 @@ import { useGeolocation, useLoad } from '../lib/hooks'
 import { distanceMeters, hourlyPattern } from '../lib/stats'
 import { HourStrip } from '../components/Charts'
 import { Row, Section, Sheet } from '../components/ui'
+import { LiveBusy, useBusyness } from '../components/LiveBusy'
 import { appleMapsUrl, CENTRES, centreUrl, googleMapsUrl, type Centre } from '../lib/evoCentres'
 
 const NEAR_M = 250
@@ -111,10 +112,7 @@ export function Clubs({ api, notify }: { api: Api; notify: (m: string) => void }
           <Sheet title={`EVO ${open.name}`} onClose={() => setOpen(null)}>
             <p className="small muted" style={{ marginTop: -6 }}>{open.address}{d !== null ? ` · ${fmtDist(d)} away` : ''}</p>
 
-            <a className="btn btn-primary btn-big" href={googleMapsUrl(open)} target="_blank" rel="noreferrer">
-              <Users size={18} strokeWidth={2.2} />How busy is it? Open Google Maps
-            </a>
-            <p className="tiny muted" style={{ marginTop: -4 }}>Google shows live busyness and popular times on the centre's page when you're signed in to Google Maps.</p>
+            <CentreBusy api={api} centre={open} />
 
             {hasData && (
               <div className="card" style={{ gap: 8 }}>
@@ -123,9 +121,10 @@ export function Clubs({ api, notify }: { api: Api; notify: (m: string) => void }
               </div>
             )}
 
-            <div className="grid2">
-              <a className="btn" href={appleMapsUrl(open)} target="_blank" rel="noreferrer"><Navigation size={17} strokeWidth={2.2} />Directions</a>
-              <a className="btn" href={centreUrl(open)} target="_blank" rel="noreferrer"><ExternalLink size={17} strokeWidth={2.2} />EVO page</a>
+            <div className="grid3">
+              <a className="btn" href={googleMapsUrl(open)} target="_blank" rel="noreferrer"><Users size={17} strokeWidth={2.2} />Google</a>
+              <a className="btn" href={appleMapsUrl(open)} target="_blank" rel="noreferrer"><Navigation size={17} strokeWidth={2.2} />Route</a>
+              <a className="btn" href={centreUrl(open)} target="_blank" rel="noreferrer"><ExternalLink size={17} strokeWidth={2.2} />EVO</a>
             </div>
 
             {s?.is_favorite
@@ -139,4 +138,9 @@ export function Clubs({ api, notify }: { api: Api; notify: (m: string) => void }
       })()}
     </div>
   )
+}
+
+function CentreBusy({ api, centre }: { api: Api; centre: Centre }) {
+  const state = useBusyness(api, centre.visitsId)
+  return <LiveBusy state={state} />
 }

@@ -233,6 +233,21 @@ export function createDemoApi(): Api {
     async rotateShortcutKey() { shortcutKey = crypto.randomUUID(); return shortcutKey },
 
     async signOut() { window.location.search = '' },
+    async centreBusyness(visitsId) {
+      await wait()
+      // A believable evening at the gym, different per centre.
+      const seed = [...visitsId].reduce((a, c) => a + c.charCodeAt(0), 0)
+      const capacity = 30 + (seed % 5) * 10
+      const h = new Date().getHours()
+      const shape = [[6, 10, 35], [10, 12, 48], [12, 15, 42], [15, 17, 70], [17, 20, 82], [20, 24, 30]] as const
+      const intervals = shape.map(([begin, end, base]) => ({
+        begin, end, label: `${String(begin).padStart(2, '0')}-${end}`, percent: base + (seed % 9) - 4,
+        status: h >= end ? 'historic' : h >= begin ? 'current' : 'future',
+      }))
+      const cur = intervals.find(i => i.status === 'current')?.percent ?? 12
+      const current = Math.round((capacity * cur) / 100)
+      return { current, capacity, percent: (current / capacity) * 100, intervals, fetchedAt: new Date().toISOString() }
+    },
     async deleteAccount() { window.location.search = '' },
   }
 }

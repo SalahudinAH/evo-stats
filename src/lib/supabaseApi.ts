@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { DEFAULT_GOALS } from './types'
+import { BusynessNotSetUp, DEFAULT_GOALS } from './types'
 import type {
+  Busyness,
   Api, CheckInResult, Club, Exercise, Food, FoodEntry, Goals, Routine, RoutineExercise, Visit, Weight, Workout, WorkoutSet,
 } from './types'
 
@@ -234,6 +235,15 @@ export function createSupabaseApi(): Api {
     },
 
     async signOut() { await db.auth.signOut() },
+    async centreBusyness(visitsId) {
+      const { data, error } = await db.functions.invoke('evo-visits', { body: { id: visitsId } })
+      if (error) {
+        const status = (error as { context?: { status?: number } }).context?.status
+        if (status === 404 || error.name === 'FunctionsFetchError') throw new BusynessNotSetUp('Live busyness is not set up yet.')
+        throw new Error('Could not get live numbers from EVO right now.')
+      }
+      return data as Busyness
+    },
     async deleteAccount() {
       check(await db.rpc('delete_my_account'))
       // The login no longer exists on the server; just forget it here.

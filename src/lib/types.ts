@@ -22,6 +22,11 @@ export interface Weight {
   source: 'manual' | 'health'
 }
 
+export interface BusynessInterval { begin: number; end: number; label: string; percent: number; status: 'historic' | 'current' | 'future' | string }
+export interface Busyness { current: number; capacity: number; percent: number; intervals: BusynessInterval[]; fetchedAt: string }
+/** Thrown when the evo-visits Edge Function hasn't been deployed yet. */
+export class BusynessNotSetUp extends Error {}
+
 export const MUSCLES = [
   'chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes', 'biceps', 'triceps', 'calves', 'core', 'other',
 ] as const
@@ -194,4 +199,7 @@ export interface Api {
   signOut(): Promise<void>
   /** Deletes the login and all data. */
   deleteAccount(): Promise<void>
+
+  /** Live crowd numbers for an EVO centre (via the evo-visits Edge Function). */
+  centreBusyness(visitsId: string): Promise<Busyness>
 }

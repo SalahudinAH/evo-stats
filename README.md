@@ -45,7 +45,9 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 
 **EVO centres**
 - All 92 EVO centres in Norway, nearest first when location is on, with search
-- One tap to the centre in Google Maps, where Google shows live busyness and popular times, plus directions and your own usual training hours there
+- Live busyness from EVO Visits: how many are training right now, how full it is, and how busy each part of the day is and is expected to be
+- Your main centre with its live numbers on Today
+- Links to Google Maps, directions and EVO's page, plus your own usual training hours there
 - Save a centre as your club for automatic check-ins
 
 **Automatic check-ins**
@@ -67,6 +69,7 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 
 - **Frontend:** React 18, TypeScript, Vite, Lucide icons. Charts are hand-written SVG, with no chart library.
 - **Barcode scanning:** the browser's BarcodeDetector where it exists, otherwise ZXing compiled to WebAssembly (`barcode-detector`), with the WebAssembly file served from this site
+- **Live busyness:** a Supabase Edge Function (`supabase/functions/evo-visits`) relays EVO's public EVO Visits numbers, since EVO's API only allows its own site
 - **Body map:** `react-muscle-highlighter`, loaded only when you open Progress
 - **Backend:** Supabase (Postgres, Auth, Row Level Security, RPC functions)
 - **Hosting:** GitHub Pages, deployed by GitHub Actions on every push to `main`
@@ -120,5 +123,6 @@ Personal project. Not affiliated with or endorsed by EVO Fitness.
 
 - EVO centre list and coordinates: [evofitness.no](https://evofitness.no/sentre/)
 - Exercise names and photos: [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas, public domain (The Unlicense)
+- Live centre numbers: [EVO Visits](https://visits.evofitness.no/)
 - Food data: [Open Food Facts](https://world.openfoodfacts.org), under the Open Database License
 - Body map: [react-muscle-highlighter](https://github.com/soroojshehryar/react-muscle-highlighter), MIT

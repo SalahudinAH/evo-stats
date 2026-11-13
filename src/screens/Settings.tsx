@@ -4,8 +4,9 @@ import { distanceMeters } from '../lib/stats'
 import type { Api } from '../lib/types'
 import { useLoad } from '../lib/hooks'
 import { SUPABASE_KEY, SUPABASE_URL, supabase } from '../lib/supabaseApi'
+import evoVisitsFunction from '../../supabase/functions/evo-visits/index.ts?raw'
 
-function Copy({ label, value, secret = false }: { label: string; value: string; secret?: boolean }) {
+function Copy({ label, value, secret = false, preview }: { label: string; value: string; secret?: boolean; preview?: string }) {
   const [done, setDone] = useState(false)
   const [shown, setShown] = useState(!secret)
   async function copy() {
@@ -27,7 +28,7 @@ function Copy({ label, value, secret = false }: { label: string; value: string; 
     <div className="copy">
       <div className="copy-label">{label}</div>
       <div className="copy-row">
-        <code>{shown ? value : `••••••••••••${value.slice(-4)}`}</code>
+        <code>{preview ?? (shown ? value : `••••••••••••${value.slice(-4)}`)}</code>
         {secret && <button className="btn btn-small" onClick={() => setShown(v => !v)}>{shown ? 'Hide' : 'Show'}</button>}
         <button className="btn btn-small" onClick={copy}>{done ? 'Copied' : 'Copy'}</button>
       </div>
@@ -107,6 +108,18 @@ p_club    ${club}`}</pre>
 p_kg           [Value]            (Number)
 p_measured_at  [Formatted Date]   (Text)`}</pre>
         <p className="muted small">Running daily also keeps the free database awake. Free Supabase projects pause after a week with no activity.</p>
+      </section>
+
+      <section className="card guide" id="live-busyness">
+        <h2>5. Live busyness</h2>
+        <p className="muted small">Shows how many people are training at a centre right now, from EVO's own EVO Visits page. EVO only lets its own site read those numbers, so a small function in your Supabase project fetches them for the app. Set it up once:</p>
+        <ol>
+          <li>Open your project on <b>supabase.com</b> › <b>Edge Functions</b> › <b>Deploy a new function</b> › <b>Via Editor</b>.</li>
+          <li>Name it <code>evo-visits</code> (exactly).</li>
+          <li>Delete the example code, paste the code below and press <b>Deploy</b>. Leave <b>Verify JWT</b> on, so only you can use it.</li>
+        </ol>
+        <Copy label="Function code" value={evoVisitsFunction} preview="supabase/functions/evo-visits/index.ts" />
+        <p className="muted small">No keys or secrets needed. After that, your main centre on Today and every centre in More › EVO centres show live numbers.</p>
       </section>
 
       <section className="card">
