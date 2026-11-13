@@ -141,8 +141,10 @@ p { margin: 0; line-height: 1.45; }
 
 input, select, textarea {
   width: 100%; min-height: 46px; padding: 10px 14px; border-radius: 13px;
-  border: 0; background: var(--surface); font-size: 17px; outline: none;
+  border: 1px solid rgba(255, 255, 255, 0.1); background: var(--surface); font-size: 17px; outline: none;
 }
+/* Fields that sit on a card need a lighter fill, or they disappear into it. */
+.card input, .card select, .card textarea, .group input, .group select, .group textarea, .hero-v2 input { background: var(--surface-2); }
 select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
 input::placeholder, textarea::placeholder { color: #7d7d7d; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent-text); box-shadow: 0 0 0 3px var(--accent-soft); }
