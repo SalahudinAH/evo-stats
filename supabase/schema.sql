@@ -59,6 +59,8 @@ create index if not exists sets_exercise_time on public.sets (exercise_id, perfo
 -- tables; your old exercises and sets are kept.
 
 alter table public.exercises add column if not exists muscle text;
+-- Photo path in the free-exercise-db library, e.g. 'Barbell_Squat/0.jpg'.
+alter table public.exercises add column if not exists image text;
 
 -- A routine is one workout in your plan, e.g. "Push day".
 create table if not exists public.routines (
@@ -117,6 +119,10 @@ create table if not exists public.foods (
 
 -- What you ate. Macros are copied in, so editing a food later
 -- doesn't change days you've already logged.
+-- Barcode (EAN/UPC) when the food came from a scan, so the next scan of the same product is instant.
+alter table public.foods add column if not exists barcode text;
+create index if not exists foods_user_barcode on public.foods (user_id, barcode);
+
 create table if not exists public.food_entries (
   id       uuid primary key default gen_random_uuid(),
   user_id  uuid not null default auth.uid() references auth.users(id) on delete cascade,

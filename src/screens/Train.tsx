@@ -6,11 +6,12 @@ import { useLoad, useNow, useTraining, type TrainingData } from '../lib/hooks'
 import { buildDraft } from '../lib/draft'
 import { e1rm, startOfWeek } from '../lib/stats'
 import {
-  bestE1rm, fmtKg, insights, MUSCLE_LABEL, nextRoutine, setsText, suggest, topWeight, volume, workingSets,
+  bestE1rm, fmtKg, insights, MUSCLE_LABEL, nextRoutine, setsText, suggest, volume, workingSets,
 } from '../lib/training'
 import { LineChart } from '../components/Charts'
+import { Calendar, Check, Clock, Dumbbell, History, ListChecks, Play, Plus, Target, TrendingUp, TriangleAlert } from 'lucide-react'
 import {
-  ExercisePicker, fmtClock, fmtDay, fmtDuration, IconDots, IconDown, IconPlay, IconPlus, IconUp, MuscleSelect, Sheet,
+  ExercisePicker, ExerciseThumb, fmtClock, fmtDay, fmtDuration, IconDots, IconDown, IconPlay, IconUp, LargeTitle, MuscleSelect, Row, Section, Sheet,
 } from '../components/ui'
 import { WorkoutReport, reportFromWorkout } from './WorkoutSummary'
 
@@ -68,11 +69,13 @@ export function Train({ nav }: { nav: Nav }) {
           <header className="screen-head"><button className="back" onClick={() => open({ kind: 'home' })}>‹ Train</button></header>
           <h1 className="detail-title">History</h1>
           {!data.workouts.length && <p className="muted">No workouts yet.</p>}
-          <ul className="cards">
-            {[...data.workouts].reverse().map(w => (
-              <li key={w.id}><WorkoutCard w={w} data={data} onClick={() => open({ kind: 'workout', id: w.id, from: view })} /></li>
-            ))}
-          </ul>
+          {data.workouts.length > 0 && (
+            <Section>
+              {[...data.workouts].reverse().map(w => (
+                <WorkoutCard key={w.id} w={w} data={data} onClick={() => open({ kind: 'workout', id: w.id, from: view })} />
+              ))}
+            </Section>
+          )}
         </div>
       )
     case 'exercises':
@@ -136,126 +139,115 @@ function TrainHome({ nav, data, goal, open, reload }: {
     }
   }
 
+  const routineMeta = (r: Routine) => {
+    const st = routineStats(r, data)
+    return `${st.items.length} exercise${st.items.length === 1 ? '' : 's'}${st.last ? ` · last ${fmtDay(st.last.started_at)}` : ''}`
+  }
+
   return (
     <div className="screen">
-      <header className="screen-head">
-        <div>
-          <h1>Train</h1>
-          <p className="sub">Week {isoWeek(new Date(now))} · {thisWeek.length} of {goal} workouts done</p>
-        </div>
-        <button className="round-btn" aria-label="New routine" onClick={() => setNaming(true)}><IconPlus size={20} /></button>
-      </header>
+      <LargeTitle title="Train" sub={`Week ${isoWeek(new Date(now))} · ${thisWeek.length} of ${goal} workouts`}
+        actions={<>
+          <button className="nav-btn" aria-label="Workout history" onClick={() => open({ kind: 'history' })}><History size={22} strokeWidth={2} /></button>
+          <button className="nav-btn" aria-label="New routine" onClick={() => setNaming(true)}><Plus size={24} strokeWidth={2} /></button>
+        </>} />
 
-      {nav.draft && !nav.draft.finished_at && (
-        <button className="card card-accent card-btn resume" onClick={nav.openWorkout}>
-          <div className="grow">
-            <h3>Workout in progress · {nav.draft.name}</h3>
-            <span className="small muted">{fmtClock(now - new Date(nav.draft.started_at).getTime())} elapsed</span>
-          </div>
-          <span className="btn btn-primary btn-small">Resume</span>
-        </button>
-      )}
-      {nav.draft?.finished_at && (
-        <button className="card card-accent card-btn resume" onClick={nav.openWorkout}>
-          <div className="grow"><h3>{nav.draft.name} isn't saved yet</h3><span className="small muted">Open the summary to save it</span></div>
-          <span className="btn btn-primary btn-small">Open</span>
-        </button>
-      )}
-
-      <section className="week-strip" aria-label="This week">
+      <section className="week-v2" aria-label="This week" style={{ marginTop: 6 }}>
         {days.map(({ d, done, isToday }) => (
-          <div key={d.toISOString()} className="week-day">
-            <span>{d.toLocaleDateString('en-GB', { weekday: 'narrow' })}</span>
-            <div className={`dot ${done.length ? 'dot-done' : isToday ? 'dot-today' : 'dot-rest'}`}
+          <div key={d.toISOString()} className="d">
+            <span className={`l ${isToday ? 'today' : ''}`}>{d.toLocaleDateString('en-GB', { weekday: 'narrow' })}</span>
+            <span className={`c ${done.length ? 'done' : isToday ? 'today' : 'rest'}`}
               aria-label={`${d.toLocaleDateString('en-GB', { weekday: 'long' })}: ${done.length ? done.map(w => w.name).join(', ') : 'no workout'}`}>
-              {done.length ? '✓' : isToday ? '•' : ''}
-            </div>
-            <span className="lbl">{done[0]?.name.replace(/ day$/i, '') ?? ''}</span>
+              {done.length > 0 && <Check size={16} strokeWidth={3} />}
+            </span>
           </div>
         ))}
       </section>
 
+      {nav.draft && (
+        <Section>
+          <Row icon={<Dumbbell size={17} strokeWidth={2} />} onClick={nav.openWorkout}
+            title={nav.draft.finished_at ? `${nav.draft.name} isn't saved yet` : `In progress · ${nav.draft.name}`}
+            sub={nav.draft.finished_at ? 'Open the summary to save it' : `${fmtClock(now - new Date(nav.draft.started_at).getTime())} elapsed`}
+            trail={<span className="pill-btn">{nav.draft.finished_at ? 'Open' : 'Resume'}</span>} />
+        </Section>
+      )}
+
       {next ? (() => {
-        const s = routineStats(next, data)
+        const st = routineStats(next, data)
+        const preview = st.items.slice(0, 3).map(i => {
+          const sessions = data.sessions.get(i.exercise_id) ?? []
+          return { i, ex: data.exById.get(i.exercise_id), tip: suggest(i, sessions) }
+        })
         return (
-          <section className="hero" aria-label="Up next">
-            <div className="card-head">
-              <div>
-                <span className="eyebrow">Up next</span>
-                <h2>{next.name}</h2>
-                {s.muscles.length > 0 && <p style={{ opacity: 0.9, fontSize: 14 }}>{s.muscles.map(m => MUSCLE_LABEL[m]).join(' · ')}</p>}
+          <>
+            <div className="section-title"><h2>Up next</h2><button onClick={() => open({ kind: 'routine', id: next.id })}>View</button></div>
+            <section className="hero-v2" aria-label={`Up next: ${next.name}`}>
+              <div className="top">
+                <span className="name">{next.name}</span>
+                {st.muscles.length > 0 && <span className="muted" style={{ fontSize: 15 }}>{st.muscles.map(m => MUSCLE_LABEL[m]).join(' · ')}</span>}
+                <div className="meta">
+                  <span><ListChecks size={15} strokeWidth={2} />{st.items.length} exercises</span>
+                  <span><Clock size={15} strokeWidth={2} />~{st.minutes} min</span>
+                  {st.last && <span><Calendar size={15} strokeWidth={2} />Last {fmtDay(st.last.started_at)}</span>}
+                </div>
               </div>
-              <button className="btn-text" onClick={() => open({ kind: 'routine', id: next.id })}>View ›</button>
-            </div>
-            <div className="meta">
-              <span><b>{s.items.length}</b> exercises</span>
-              <span><b>{s.sets}</b> sets</span>
-              <span><b>~{s.minutes}</b> min</span>
-              {s.last && <span style={{ opacity: 0.85 }}>Last: {fmtDay(s.last.started_at)}</span>}
-            </div>
-            <button className="btn btn-white btn-big" onClick={() => begin(next)} disabled={!s.items.length}>
-              <IconPlay /> {s.items.length ? 'Begin workout' : 'Add exercises first'}
-            </button>
-          </section>
+              {preview.length > 0 && (
+                <div className="plan">
+                  {preview.map(({ i, ex, tip }) => (
+                    <div key={i.id} className="plan-row">
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex?.name ?? 'Exercise'}</span>
+                      <span className="t">{i.target_sets} × {i.rep_min}{i.rep_max !== i.rep_min ? `–${i.rep_max}` : ''}</span>
+                      <span style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3, color: tip?.kind === 'up' ? 'var(--up)' : tip?.kind === 'warn' ? 'var(--warn)' : 'var(--text-2)' }}>
+                        {tip?.kind === 'up' && <TrendingUp size={14} strokeWidth={2.4} />}
+                        {tip?.weight != null ? `${fmtKg(tip.weight)} kg` : '–'}
+                      </span>
+                    </div>
+                  ))}
+                  {st.items.length > 3 && <div className="more">+ {st.items.length - 3} more</div>}
+                </div>
+              )}
+              <div className="cta">
+                <button className="btn btn-primary btn-big" onClick={() => begin(next)} disabled={!st.items.length}>
+                  <Play size={18} fill="currentColor" strokeWidth={0} /> {st.items.length ? 'Start workout' : 'Add exercises first'}
+                </button>
+              </div>
+            </section>
+          </>
         )
       })() : (
-        <section className="card">
+        <section className="card" style={{ marginTop: 8 }}>
           <h2>Build your plan</h2>
-          <p className="muted small">A plan is a few routines you rotate through, like Push / Pull / Legs. Each routine lists exercises with a target such as 4 × 6–8. When you begin one, last time's numbers are filled in so you can beat them.</p>
+          <p className="muted small">A plan is a few routines you rotate through, like Push / Pull / Legs. Each routine lists exercises with a target such as 4 × 6–8. When you start one, last time's numbers are filled in so you can beat them.</p>
           <button className="btn btn-primary" onClick={template} disabled={busy}>{busy ? 'Adding…' : 'Start with Push / Pull / Legs'}</button>
           <button className="btn" onClick={() => setNaming(true)}>Make my own routine</button>
         </section>
       )}
 
-      {tips.length > 0 && (
-        <section className="card" aria-labelledby="focus-h">
-          <div className="card-head">
-            <h2 id="focus-h">Work on this</h2>
-            <button className="btn-text" style={{ minHeight: 0 }} onClick={() => nav.go('progress')}>All insights ›</button>
-          </div>
-          {tips.map(tip => (
-            <button key={tip.title} className="insight card-btn" disabled={!tip.exerciseId}
-              onClick={() => tip.exerciseId && open({ kind: 'exercise', id: tip.exerciseId })}>
-              <span className="insight-ic">!</span>
-              <span><span className="t">{tip.title}</span><span className="b" style={{ display: 'block' }}>{tip.body}</span></span>
-            </button>
-          ))}
-        </section>
-      )}
+      <Section title="Routines" action={<button onClick={() => open({ kind: 'exercises' })}>Exercises</button>}>
+        {data.routines.map(r => (
+          <Row key={r.id} onClick={() => open({ kind: 'routine', id: r.id })} chevron title={r.name} sub={routineMeta(r)}
+            trail={next?.id === r.id ? <span className="text-accent" style={{ fontSize: 12, fontWeight: 600 }}>Up next</span> : undefined} />
+        ))}
+        <button type="button" className="group-row accent" onClick={() => begin(null)}><Plus size={20} strokeWidth={2} />Empty workout</button>
+      </Section>
 
-      {data.routines.length > 0 && (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }} aria-labelledby="plan-h">
-          <div className="section-head">
-            <h2 id="plan-h">My plan</h2>
-            <button className="btn-text" onClick={() => open({ kind: 'exercises' })}>Exercises ›</button>
-          </div>
-          {data.routines.map(r => {
-            const s = routineStats(r, data)
-            return (
-              <div key={r.id} className="card routine-row">
-                <button className="grow" onClick={() => open({ kind: 'routine', id: r.id })}>
-                  <span className="name">{r.name}</span>
-                  <span className="small muted">{s.muscles.map(m => MUSCLE_LABEL[m]).join(' · ') || 'No exercises yet'}</span>
-                  <span className="tiny muted">{s.items.length} exercises{s.last ? ` · last ${fmtDay(s.last.started_at)}` : ''}</span>
-                </button>
-                <button className="btn btn-soft btn-small" onClick={() => begin(r)} disabled={!s.items.length}>Start</button>
-              </div>
-            )
-          })}
-        </section>
+      {tips.length > 0 && (
+        <Section title="Work on" action={<button onClick={() => nav.go('progress')}>All</button>} className="icons">
+          {tips.map(tip => (
+            <Row key={tip.title} iconTone="warn" icon={tip.exerciseId ? <TriangleAlert size={17} strokeWidth={2} /> : <Target size={17} strokeWidth={2} />}
+              title={tip.title} sub={tip.body} chevron={!!tip.exerciseId}
+              onClick={tip.exerciseId ? () => open({ kind: 'exercise', id: tip.exerciseId! }) : undefined} />
+          ))}
+        </Section>
       )}
-      <button className="btn btn-dashed btn-big" onClick={() => begin(null)}>+ Empty workout</button>
 
       {data.workouts.length > 0 && (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }} aria-labelledby="recent-h">
-          <div className="section-head">
-            <h2 id="recent-h">Recent workouts</h2>
-            <button className="btn-text" onClick={() => open({ kind: 'history' })}>History ›</button>
-          </div>
+        <Section title="Recent" action={<button onClick={() => open({ kind: 'history' })}>See all</button>}>
           {[...data.workouts].reverse().slice(0, 3).map(w => (
             <WorkoutCard key={w.id} w={w} data={data} onClick={() => open({ kind: 'workout', id: w.id })} />
           ))}
-        </section>
+        </Section>
       )}
 
       {naming && (
@@ -278,22 +270,12 @@ function WorkoutCard({ w, data, onClick }: { w: Workout; data: TrainingData; onC
   const prevVol = prevW ? volume(workingSets(data.sets.filter(s => s.workout_id === prevW.id))) : 0
   const delta = prevVol ? ((vol - prevVol) / prevVol) * 100 : null
   return (
-    <button className="card card-btn" onClick={onClick}>
-      <div className="card-head" style={{ alignItems: 'baseline' }}>
-        <h3>{w.name}</h3>
-        <span className="tiny muted">{fmtDay(w.started_at)}</span>
-      </div>
-      <div className="small muted" style={{ display: 'flex', gap: 14 }}>
-        <span>{fmtDuration(new Date(w.finished_at).getTime() - new Date(w.started_at).getTime())}</span>
+    <Row onClick={onClick} chevron title={w.name}
+      sub={`${fmtDay(w.started_at)} · ${fmtDuration(new Date(w.finished_at).getTime() - new Date(w.started_at).getTime())}`}
+      trail={<>
         <span>{Math.round(vol).toLocaleString('en-GB')} kg</span>
-        <span>{sets.length} sets</span>
-      </div>
-      {delta !== null && (
-        <span className={`small ${delta >= 0 ? 'text-up' : 'text-down'}`} style={{ fontWeight: 650 }}>
-          {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}% volume vs last {w.name}
-        </span>
-      )}
-    </button>
+        {delta !== null && <span className={delta >= 0 ? 'text-up' : 'text-down'} style={{ fontSize: 13, fontWeight: 600 }}>{delta >= 0 ? '+' : '−'}{Math.abs(delta).toFixed(0)}%</span>}
+      </>} />
   )
 }
 
@@ -381,7 +363,7 @@ function RoutineDetail({ nav, data, routine, back, open, reload }: {
           return (
             <li key={`${it.exercise_id}-${i}`} className="card" style={{ padding: 0 }}>
               <div className="ex-row">
-                <div className="ex-num">{i + 1}</div>
+                {ex?.image ? <ExerciseThumb image={ex.image} size={40} /> : <div className="ex-num">{i + 1}</div>}
                 <button className="grow card-btn" style={{ background: 'none', border: 0, padding: 0 }} onClick={() => !editing && open({ kind: 'exercise', id: it.exercise_id, from: { kind: 'routine', id: routine.id } })}>
                   <span className="top"><h3>{ex?.name ?? 'Deleted exercise'}</h3>{!editing && <span className="small" style={{ fontWeight: 650 }}>{it.target_sets} × {it.rep_min}{it.rep_max !== it.rep_min ? `–${it.rep_max}` : ''}</span>}</span>
                   {!editing && <span className="tiny muted">Last: {last ? setsText(last.sets) : 'not done yet'}</span>}
@@ -431,9 +413,9 @@ function RoutineDetail({ nav, data, routine, back, open, reload }: {
       {picking && (
         <ExercisePicker api={nav.api} exercises={data.exercises} exclude={items.map(i => i.exercise_id)}
           onClose={() => setPicking(false)} onCreated={reload}
-          onPick={async e => {
+          onPickMany={async list => {
             setPicking(false)
-            const next = [...items, { exercise_id: e.id, target_sets: 3, rep_min: 8, rep_max: 12 }]
+            const next = [...items, ...list.map(e => ({ exercise_id: e.id, target_sets: 3, rep_min: 8, rep_max: 12 }))]
             setItems(next)
             if (!editing) await save(next)
           }} />
@@ -480,6 +462,9 @@ function ExerciseDetail({ api, data, exercise, back, reload, notify }: {
         <button className="back" onClick={back}>‹ Back</button>
         <button className="icon-btn" aria-label="Exercise options" onClick={() => setMenu(true)}><IconDots /></button>
       </header>
+      {exercise.image && (
+        <ExerciseThumb image={exercise.image} className="ex-photo" size={0} />
+      )}
       <div style={{ marginTop: -6, display: 'flex', flexDirection: 'column', gap: 4 }}>
         <h1>{exercise.name}</h1>
         <p className="small muted">{exercise.muscle ? MUSCLE_LABEL[exercise.muscle] : 'Muscle not set'} · {sessions.length} session{sessions.length === 1 ? '' : 's'}</p>
@@ -598,23 +583,17 @@ function ExerciseLibrary({ nav, data, back, open, reload }: {
         <button className="btn-text" onClick={() => setPicking(true)}>+ New</button>
       </header>
       <h1 className="detail-title">Exercises</h1>
-      <ul className="cards">
+      <Section className="thumbs">
         {data.exercises.map(e => {
           const sessions = data.sessions.get(e.id) ?? []
-          const last = sessions[sessions.length - 1]
+          const best = bestE1rm(sessions.flatMap(x => x.sets))
           return (
-            <li key={e.id}>
-              <button className="card card-btn" onClick={() => open({ kind: 'exercise', id: e.id, from: { kind: 'exercises' } })}>
-                <div className="card-head"><h3>{e.name}</h3><span className="chev" aria-hidden="true">›</span></div>
-                <span className="small muted">
-                  {e.muscle ? MUSCLE_LABEL[e.muscle] : 'Muscle not set'}
-                  {last ? ` · best e1RM ${bestE1rm(sessions.flatMap(s => s.sets)).toFixed(1)} kg · top ${fmtKg(topWeight(last.sets))} kg last time` : ' · no sets yet'}
-                </span>
-              </button>
-            </li>
+            <Row key={e.id} thumb={<ExerciseThumb image={e.image} />} chevron title={e.name}
+              onClick={() => open({ kind: 'exercise', id: e.id, from: { kind: 'exercises' } })}
+              sub={`${e.muscle ? MUSCLE_LABEL[e.muscle] : 'Muscle not set'}${sessions.length ? ` · best e1RM ${best.toFixed(1)} kg` : ' · no sets yet'}`} />
           )
         })}
-      </ul>
+      </Section>
       {picking && (
         <ExercisePicker api={nav.api} exercises={data.exercises} onClose={() => setPicking(false)} onCreated={reload}
           onPick={e => { setPicking(false); open({ kind: 'exercise', id: e.id, from: { kind: 'exercises' } }) }} />

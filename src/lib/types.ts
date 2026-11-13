@@ -32,6 +32,8 @@ export interface Exercise {
   name: string
   /** Main muscle the exercise trains. Null for lifts added before muscles existed. */
   muscle: Muscle | null
+  /** Photo path in the exercise library (free-exercise-db), if it came from there. */
+  image: string | null
 }
 
 export interface WorkoutSet {
@@ -98,6 +100,8 @@ export interface Food extends Macros {
   id: string
   name: string
   serving: string
+  /** EAN/UPC barcode when the food came from a scan. */
+  barcode?: string | null
 }
 
 export interface FoodEntry extends Macros {
@@ -155,8 +159,8 @@ export interface Api {
   deleteWeight(id: string): Promise<void>
 
   listExercises(): Promise<Exercise[]>
-  addExercise(name: string, muscle: Muscle | null): Promise<Exercise>
-  updateExercise(id: string, patch: Partial<Pick<Exercise, 'name' | 'muscle'>>): Promise<void>
+  addExercise(name: string, muscle: Muscle | null, image?: string | null): Promise<Exercise>
+  updateExercise(id: string, patch: Partial<Pick<Exercise, 'name' | 'muscle' | 'image'>>): Promise<void>
   deleteExercise(id: string): Promise<void>
   listSets(): Promise<WorkoutSet[]>
   deleteSet(id: string): Promise<void>

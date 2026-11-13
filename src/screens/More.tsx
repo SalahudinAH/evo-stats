@@ -1,4 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
+import { CalendarCheck, ChevronLeft, MapPin, Scale, Settings as SettingsIcon, Target } from 'lucide-react'
+import { LargeTitle, Row, Section } from '../components/ui'
 import { scrollToTop } from '../lib/scroll'
 import type { Nav } from '../App'
 import type { Visit } from '../lib/types'
@@ -24,7 +26,7 @@ export function More({ nav }: { nav: Nav }) {
   if (sub) {
     return (
       <div className="screen">
-        <header className="screen-head" style={{ marginBottom: -10 }}><button className="back" onClick={() => open(null)}>‹ More</button></header>
+        <div className="nav-bar"><button className="nav-btn nav-text" onClick={() => open(null)}><ChevronLeft size={24} strokeWidth={2.2} />More</button></div>
         {sub === 'clubs' && <Clubs api={nav.api} notify={nav.notify} />}
         {sub === 'visits' && <VisitHistory nav={nav} />}
         {sub === 'weight' && <WeightScreen api={nav.api} notify={nav.notify} />}
@@ -35,27 +37,22 @@ export function More({ nav }: { nav: Nav }) {
 
   return (
     <div className="screen">
-      <header className="screen-head"><h1>More</h1></header>
-      <section className="card menu">
-        <Item title="Clubs" sub="Your EVO clubs and when you usually train" onClick={() => open('clubs')} />
-        <Item title="Visit history" sub="Every check-in, and delete mistakes" onClick={() => open('visits')} />
-        <Item title="Weight log" sub="All entries, add or delete" onClick={() => open('weight')} />
-        <Item title="Goals" sub={g.data ? `${g.data.kcal.toLocaleString('en-GB')} kcal · ${g.data.protein} g protein · ${g.data.workouts_per_week} workouts a week` : 'Calories, macros and workouts per week'} onClick={() => setGoals(true)} />
-        <Item title="Settings & Shortcuts" sub="Auto check-in, weight sync, sign out" onClick={() => open('settings')} />
-      </section>
+      <LargeTitle title="More" />
+      <Section title="Gym">
+        <Row icon={<MapPin size={18} strokeWidth={2} />} title="Clubs" sub="Your EVO clubs and when you usually train" onClick={() => open('clubs')} chevron />
+        <Row icon={<CalendarCheck size={18} strokeWidth={2} />} title="Visit history" sub="Every check-in, and delete mistakes" onClick={() => open('visits')} chevron />
+      </Section>
+      <Section title="You">
+        <Row icon={<Scale size={18} strokeWidth={2} />} iconTone="up" title="Weight log" sub="All entries, add or delete" onClick={() => open('weight')} chevron />
+        <Row icon={<Target size={18} strokeWidth={2} />} iconTone="up" title="Goals" sub={g.data ? `${g.data.kcal.toLocaleString('en-GB')} kcal · ${g.data.protein} g protein · ${g.data.workouts_per_week} workouts a week` : 'Calories, macros and workouts per week'} onClick={() => setGoals(true)} chevron />
+      </Section>
+      <Section>
+        <Row icon={<SettingsIcon size={18} strokeWidth={2} />} iconTone="warn" title="Settings & Shortcuts" sub="Auto check-in, weight sync, sign out" onClick={() => open('settings')} chevron />
+      </Section>
       {goals && g.data && (
         <GoalsSheet api={nav.api} goals={g.data} onReplan={() => { setGoals(false); nav.openPlanner() }} onClose={() => setGoals(false)} onSaved={() => { setGoals(false); g.reload(); nav.notify('Goals saved') }} />
       )}
     </div>
-  )
-}
-
-function Item({ title, sub, onClick }: { title: string; sub: ReactNode; onClick: () => void }) {
-  return (
-    <button className="menu-item" onClick={onClick}>
-      <span className="grow"><h3>{title}</h3><span className="small muted">{sub}</span></span>
-      <span className="chev" aria-hidden="true">›</span>
-    </button>
   )
 }
 

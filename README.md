@@ -10,7 +10,7 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 <p align="center">
   <img src="docs/screenshots/summary.png" width="200" alt="Finished workout compared with the last session of the same routine">
   <img src="docs/screenshots/food.png" width="200" alt="Food: calories and macros per meal">
-  <img src="docs/screenshots/progress.png" width="200" alt="Progress: weekly sets per muscle and stalled lifts">
+  <img src="docs/screenshots/progress.png" width="200" alt="Progress: a body map shaded by weekly sets per muscle">
 </p>
 
 ## Features
@@ -28,14 +28,17 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 - **Finish** to compare with the last time you did that routine: volume, reps, time, each exercise up or down, and new personal records
 - A plan for next time, for example "Hit 8 reps on every set, then go up to 62.5 kg"
 - The workout in progress is kept on the phone until you save it, so closing the app or losing signal at the gym loses nothing
+- An exercise library of about 750 exercises with photos. Search, filter by muscle, pick several at once, or create your own
 
 **Food**
 - Calories and macros per meal: breakfast, lunch, dinner and snacks
 - Your own food library with serving sizes, plus one-tap adds for the foods you log most
+- Scan a barcode with the camera. Nutrition comes from Open Food Facts, you enter the grams, and the calories and macros are worked out from the per-100 g values. Products it doesn't know can be typed in from the label once, and after that a scan is instant
 - Setup on first sign-in: from sex, age, height, weight, goal weight and activity it estimates your maintenance calories (Mifflin–St Jeor), then offers a mild, normal or aggressive cut or a lean bulk or bulk, with the weekly rate and weeks to your goal
 - Daily goals for calories, protein, carbs and fat. Change the calories and the macros scale with them; change a macro and the calories follow
 
 **Progress**
+- A front and back body map shaded by your weekly working sets per muscle. Tap a muscle to focus on it
 - Weekly working sets per muscle compared with a target
 - What to work on: lagging muscles and lifts that have stalled
 - Estimated 1-rep max trend for your main lifts, body weight, and visits per week
@@ -57,7 +60,9 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 
 ## Tech stack
 
-- **Frontend:** React 18, TypeScript, Vite. Charts are hand-written SVG, with no chart library.
+- **Frontend:** React 18, TypeScript, Vite, Lucide icons. Charts are hand-written SVG, with no chart library.
+- **Barcode scanning:** the browser's BarcodeDetector where it exists, otherwise ZXing compiled to WebAssembly (`barcode-detector`), with the WebAssembly file served from this site
+- **Body map:** `react-muscle-highlighter`, loaded only when you open Progress
 - **Backend:** Supabase (Postgres, Auth, Row Level Security, RPC functions)
 - **Hosting:** GitHub Pages, deployed by GitHub Actions on every push to `main`
 - **Automation:** iPhone Shortcuts calling token-protected database functions
@@ -105,3 +110,9 @@ Open `http://localhost:5173/?demo` to try the app with eight weeks of sample dat
 ---
 
 Personal project. Not affiliated with or endorsed by EVO Fitness.
+
+## Credits
+
+- Exercise names and photos: [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas, public domain (The Unlicense)
+- Food data: [Open Food Facts](https://world.openfoodfacts.org), under the Open Database License
+- Body map: [react-muscle-highlighter](https://github.com/soroojshehryar/react-muscle-highlighter), MIT

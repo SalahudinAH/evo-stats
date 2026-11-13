@@ -18,8 +18,8 @@ export function createDemoApi(): Api {
 
   // ---- Plan: push / pull / legs -----------------------------------------
   const exercises: Exercise[] = []
-  const ex = (name: string, muscle: Muscle) => { const e = { id: id(), name, muscle }; exercises.push(e); return e }
-  const bench = ex('Bench press', 'chest')
+  const ex = (name: string, muscle: Muscle, image: string | null = null) => { const e = { id: id(), name, muscle, image }; exercises.push(e); return e }
+  const bench = ex('Bench press', 'chest', 'Barbell_Bench_Press_-_Medium_Grip/0.jpg')
   const incline = ex('Incline DB press', 'chest')
   const ohp = ex('Overhead press', 'shoulders')
   const lateral = ex('Lateral raise', 'shoulders')
@@ -27,9 +27,9 @@ export function createDemoApi(): Api {
   const row = ex('Barbell row', 'back')
   const pulldown = ex('Lat pulldown', 'back')
   const curl = ex('Biceps curl', 'biceps')
-  const squat = ex('Back squat', 'quads')
-  const legPress = ex('Leg press', 'quads')
-  const rdl = ex('Romanian deadlift', 'hamstrings')
+  const squat = ex('Back squat', 'quads', 'Barbell_Squat/0.jpg')
+  const legPress = ex('Leg press', 'quads', 'Leg_Press/0.jpg')
+  const rdl = ex('Romanian deadlift', 'hamstrings', 'Romanian_Deadlift/0.jpg')
 
   const routines: Routine[] = [
     { id: id(), name: 'Push day', position: 0 },
@@ -170,9 +170,9 @@ export function createDemoApi(): Api {
     async deleteWeight(wid) { remove(weights, wid) },
 
     async listExercises() { await wait(); return clone(exercises).sort((a, b) => a.name.localeCompare(b.name)) },
-    async addExercise(name, muscle) {
+    async addExercise(name, muscle, image = null) {
       if (exercises.some(e => e.name.toLowerCase() === name.toLowerCase())) throw new Error('duplicate key value')
-      const e = { id: id(), name, muscle }
+      const e = { id: id(), name, muscle, image }
       exercises.push(e)
       return { ...e }
     },

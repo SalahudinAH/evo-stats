@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ChartLine, Dumbbell, Ellipsis, House, Utensils } from 'lucide-react'
 import { scrollToTop } from './lib/scroll'
 import type { Session } from '@supabase/supabase-js'
 import type { Api } from './lib/types'
@@ -197,15 +198,9 @@ function TabBtn({ active, onClick, label, icon }: { active: boolean; onClick: ()
   )
 }
 
-const svg = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8,
-  strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
-
-const IconHome = () => <svg {...svg}><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z" /></svg>
-export const IconDumbbell = () => <svg {...svg}><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11" /></svg>
-const IconFood = () => <svg {...svg}><path d="M7 3v7a2 2 0 0 0 4 0V3M9 12v9M17 21V3c-2 .8-3.5 3.5-3.5 7.5H17" /></svg>
-const IconChart = () => <svg {...svg}><path d="M4 20h16M6 15l4-4.5 3 2.5 5-6.5" /><path d="M15 6.5h3v3" /></svg>
-const IconMore = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <circle cx="5.5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="18.5" cy="12" r="1.6" />
-  </svg>
-)
+const ICON = { size: 25, strokeWidth: 1.8, 'aria-hidden': true } as const
+const IconHome = () => <House {...ICON} />
+export const IconDumbbell = () => <Dumbbell {...ICON} />
+const IconFood = () => <Utensils {...ICON} />
+const IconChart = () => <ChartLine {...ICON} />
+const IconMore = () => <Ellipsis {...ICON} strokeWidth={2.4} />

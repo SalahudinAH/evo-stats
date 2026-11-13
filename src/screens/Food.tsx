@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
 import type { Nav } from '../App'
 import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
 import { useLoad } from '../lib/hooks'
 import { kcalFromMacros, planLabel, scaleMacros } from '../lib/nutrition'
-import { IconPlus, IconSearch, Sheet } from '../components/ui'
+import { IconSearch, LargeTitle, Row, Section, Sheet } from '../components/ui'
+import { BarcodeScanner } from '../components/Scanner'
+import { lookupBarcode, type ScannedProduct } from '../lib/openFoodFacts'
 
 const DAY = 24 * 3600 * 1000
 const MEAL_LABEL: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' }
@@ -61,95 +64,197 @@ export function FoodScreen({ nav }: { nav: Nav }) {
 
   const dayLabel = offset === 0 ? 'Today' : offset === -1 ? 'Yesterday' : from.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 
+  const [scanning, setScanning] = useState(false)
+  const [scanned, setScanned] = useState<string | null>(null)
+  const [entryMenu, setEntryMenu] = useState<FoodEntry | null>(null)
+  const pct = (v: number, goal: number | undefined) => `${goal ? Math.min(100, (v / goal) * 100) : 0}%`
+
   return (
     <div className="screen">
-      <header className="screen-head">
-        <h1>Food</h1>
-        <div className="date-switch">
-          <button aria-label="Previous day" onClick={() => setOffset(o => o - 1)}>‹</button>
-          <span>{dayLabel}</span>
-          <button aria-label="Next day" onClick={() => setOffset(o => o + 1)} disabled={offset >= 0}>›</button>
-        </div>
-      </header>
+      <LargeTitle title="Food" sub={offset === 0 ? `Today, ${from.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}` : dayLabel}
+        actions={<>
+          <button className="nav-btn" aria-label="Previous day" onClick={() => setOffset(o => o - 1)}><ChevronLeft size={24} strokeWidth={2.2} /></button>
+          <button className="nav-btn" aria-label="Next day" onClick={() => setOffset(o => o + 1)} disabled={offset >= 0}><ChevronRight size={24} strokeWidth={2.2} /></button>
+        </>} />
 
       {(entries.error || goals.error) && <p className="error">{entries.error ?? goals.error}</p>}
 
-      <button className="search card-btn" onClick={() => setAdding(mealNow())} style={{ color: 'var(--muted)' }}>
-        <IconSearch /> <span>Search or add food</span>
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+        <button className="searchbar" style={{ border: 0, cursor: 'pointer', textAlign: 'left' }} onClick={() => setAdding(mealNow())}>
+          <Search size={18} strokeWidth={2.2} /> <span style={{ fontSize: 17 }}>Search food</span>
+        </button>
+        <button className="square-btn" aria-label="Scan a barcode" onClick={() => setScanning(true)}><ScanBarcode size={20} strokeWidth={2} /></button>
+      </div>
 
-      <section className="card" aria-label="Calories">
+      <section className="hero-v2" aria-label="Calories" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <div className="big-left" style={{ color: left < 0 ? 'var(--warn)' : undefined }}>{g ? Math.abs(left).toLocaleString('en-GB') : '–'}</div>
-            <div className="small muted" style={{ marginTop: 4 }}>{left < 0 ? 'kcal over goal' : 'kcal left'}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: left < 0 ? 'var(--warn)' : undefined }}>{g ? Math.abs(left).toLocaleString('en-GB') : '–'}</span>
+            <span className="muted" style={{ fontSize: 15 }}>{left < 0 ? 'kcal over' : 'kcal left'}</span>
           </div>
-          <div className="small muted" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span>Goal <b style={{ color: 'var(--text)' }}>{g?.kcal.toLocaleString('en-GB') ?? '–'}</b></span>
-            <span>Eaten <b style={{ color: 'var(--text)' }}>{Math.round(total.kcal).toLocaleString('en-GB')}</b></span>
-          </div>
+          <span className="muted" style={{ fontSize: 15 }}>{Math.round(total.kcal).toLocaleString('en-GB')} of {g?.kcal.toLocaleString('en-GB') ?? '–'}</span>
         </div>
-        <div className={`kbar ${left < 0 ? 'over' : ''}`}><div style={{ width: `${g ? Math.min(100, (total.kcal / g.kcal) * 100) : 0}%` }} /></div>
-        <div className="macro-tiles">
-          {([['Protein', total.protein, g?.protein, 'var(--protein)'], ['Carbs', total.carbs, g?.carbs, 'var(--carbs)'], ['Fat', total.fat, g?.fat, 'var(--fat)']] as const).map(([name, v, goal, color]) => (
-            <div key={name} className="macro-tile">
-              <span className="tiny" style={{ color, fontWeight: 650 }}>{name}</span>
-              <span style={{ fontWeight: 700 }}>{Math.round(v)}<span className="tiny muted" style={{ fontWeight: 500 }}> / {goal ?? '–'} g</span></span>
-              <div className="mbar"><div style={{ width: `${goal ? Math.min(100, (v / goal) * 100) : 0}%`, background: color }} /></div>
-            </div>
-          ))}
+        <div className={`kbar ${left < 0 ? 'over' : ''}`} style={{ height: 8 }}><div style={{ width: pct(total.kcal, g?.kcal) }} /></div>
+        <div className="macro3">
+          <div><span className="k">Protein</span><span className="v">{Math.round(total.protein)}<span> / {g?.protein ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.protein, g?.protein), background: 'var(--protein)' }} /></span></div>
+          <div><span className="k">Carbs</span><span className="v">{Math.round(total.carbs)}<span> / {g?.carbs ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.carbs, g?.carbs), background: 'var(--carbs)' }} /></span></div>
+          <div><span className="k">Fat</span><span className="v">{Math.round(total.fat)}<span> / {g?.fat ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.fat, g?.fat), background: 'var(--fat)' }} /></span></div>
         </div>
       </section>
 
       {usual.length > 0 && offset === 0 && (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }} aria-label="Quick add">
-          <span className="small muted" style={{ fontWeight: 600 }}>Quick add · your usuals</span>
-          <div className="quick">
-            {usual.map(f => <button key={f.id} onClick={() => quickAdd(f)}>+ {f.name} <span className="muted">{f.kcal}</span></button>)}
+        <>
+          <div className="section-title"><h2>Your usuals</h2></div>
+          <div className="chips scroll" aria-label="Quick add">
+            {usual.map(f => <button key={f.id} className="chip-btn" onClick={() => quickAdd(f)}>{f.name}<span className="muted">{f.kcal}</span></button>)}
           </div>
-        </section>
+        </>
       )}
 
       {MEALS.map(meal => {
         const items = list.filter(e => e.meal === meal)
         const kcal = sumMacros(items).kcal
         return (
-          <section key={meal} className="card" style={{ gap: 4 }}>
-            <div className="card-head" style={{ alignItems: 'center' }}>
-              <div style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-                <h2>{MEAL_LABEL[meal]}</h2>
-                {kcal > 0 && <span className="small muted">{Math.round(kcal)} kcal</span>}
-              </div>
-              <button className="icon-btn btn-soft" style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
-                aria-label={`Add food to ${MEAL_LABEL[meal]}`} onClick={() => setAdding(meal)}><IconPlus /></button>
-            </div>
-            {!items.length && <p className="small muted">Nothing logged</p>}
+          <Section key={meal} title={`${MEAL_LABEL[meal]}${kcal > 0 ? ` · ${Math.round(kcal)} kcal` : ''}`}
+            action={items.length ? <button aria-label={`Add food to ${MEAL_LABEL[meal]}`} onClick={() => setAdding(meal)}><Plus size={22} strokeWidth={2.2} /></button> : undefined}>
             {items.map(e => (
-              <div key={e.id} className="food-row">
-                <div className="grow">
-                  <span style={{ fontWeight: 550 }}>{e.name}</span>
-                  <span className="tiny muted">{e.serving ? `${e.serving} · ` : ''}P {round1(e.protein)} · C {round1(e.carbs)} · F {round1(e.fat)}</span>
-                </div>
-                <div className="row-end">
-                  <span style={{ fontWeight: 650 }}>{Math.round(e.kcal)}</span>
-                  <button className="icon-btn" aria-label={`Delete ${e.name}`} onClick={async () => { await nav.api.deleteFoodEntry(e.id); reload() }}>×</button>
-                </div>
-              </div>
+              <Row key={e.id} title={e.name} onClick={() => setEntryMenu(e)}
+                sub={`${e.serving ? `${e.serving} · ` : ''}P ${round1(e.protein)} · C ${round1(e.carbs)} · F ${round1(e.fat)}`}
+                trail={<span style={{ fontSize: 17 }}>{Math.round(e.kcal)}</span>} />
             ))}
-          </section>
+            {!items.length && (
+              <button type="button" className="group-row accent" onClick={() => setAdding(meal)}><Plus size={20} strokeWidth={2} />Add {MEAL_LABEL[meal].toLowerCase()}</button>
+            )}
+          </Section>
         )
       })}
 
-      <button className="btn" onClick={() => setEditGoals(true)}>Calorie & macro goals</button>
+      <button className="btn" style={{ marginTop: 8 }} onClick={() => setEditGoals(true)}>Calorie & macro goals</button>
 
       {adding && foods.data && (
         <AddFood api={nav.api} foods={foods.data} meal={adding} offset={offset} onClose={() => setAdding(null)}
+          onScan={() => { setAdding(null); setScanning(true) }}
           onAdded={name => { setAdding(null); nav.notify(`${name} added`); reload() }} />
+      )}
+      {scanning && (
+        <BarcodeScanner onClose={() => setScanning(false)} onCode={code => { setScanning(false); setScanned(code) }} />
+      )}
+      {scanned && foods.data && (
+        <ScanResult api={nav.api} foods={foods.data} code={scanned} offset={offset} onClose={() => setScanned(null)}
+          onRescan={() => { setScanned(null); setScanning(true) }}
+          onAdded={name => { setScanned(null); nav.notify(`${name} added`); reload() }} />
+      )}
+      {entryMenu && (
+        <Sheet title={entryMenu.name} onClose={() => setEntryMenu(null)}>
+          <p className="small muted">{entryMenu.serving ? `${entryMenu.serving} · ` : ''}{Math.round(entryMenu.kcal)} kcal · P {round1(entryMenu.protein)} · C {round1(entryMenu.carbs)} · F {round1(entryMenu.fat)}</p>
+          <button className="btn btn-danger-quiet" onClick={async () => {
+            await nav.api.deleteFoodEntry(entryMenu.id)
+            setEntryMenu(null)
+            reload()
+          }}><Trash2 size={18} strokeWidth={2} />Delete</button>
+        </Sheet>
       )}
       {editGoals && g && (
         <GoalsSheet api={nav.api} goals={g} onReplan={() => { setEditGoals(false); nav.openPlanner() }} onClose={() => setEditGoals(false)} onSaved={() => { setEditGoals(false); goals.reload(); nav.notify('Goals saved') }} />
       )}
     </div>
+  )
+}
+
+/** After a scan: look the barcode up, ask how many grams, add it. */
+function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
+  api: Api; foods: Food[]; code: string; offset: number; onClose: () => void; onAdded: (name: string) => void; onRescan: () => void
+}) {
+  const known = foods.find(f => f.barcode === code) ?? null
+  const [state, setState] = useState<'loading' | 'found' | 'missing' | 'error'>(known ? 'found' : 'loading')
+  const [product, setProduct] = useState<ScannedProduct | null>(null)
+  const [meal, setMeal] = useState<Meal>(mealNow())
+  const [grams, setGrams] = useState('100')
+  const [form, setForm] = useState({ name: '', kcal: '', protein: '', carbs: '', fat: '' })
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (known) return
+    let live = true
+    lookupBarcode(code).then(p => {
+      if (!live) return
+      setProduct(p)
+      if (p?.servingGrams) setGrams(String(Math.round(p.servingGrams)))
+      if (p && p.per100) setState('found')
+      else { setForm(f => ({ ...f, name: p ? p.name : '' })); setState('missing') }
+    }, () => live && setState('error'))
+    return () => { live = false }
+  }, [code, known])
+
+  const num = (s: string) => { const n = parseFloat(s.replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : 0 }
+  const per100 = known ? { kcal: known.kcal, protein: known.protein, carbs: known.carbs, fat: known.fat }
+    : state === 'found' && product?.per100 ? product.per100
+    : { kcal: num(form.kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat) }
+  const g = num(grams)
+  const f = g / 100
+  const title = known ? known.name : product ? (product.brand ? `${product.name} (${product.brand})` : product.name) : form.name.trim()
+
+  async function add() {
+    if (!title || g <= 0) return
+    setBusy(true)
+    try {
+      const food = known ?? await api.addFood({ name: title, serving: '100 g', ...per100, barcode: code })
+      await api.addFoodEntry({ ...entryFrom(food, f, meal, offset), serving: `${Math.round(g)} g` })
+      onAdded(title)
+    } catch {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Sheet title={state === 'missing' ? 'New product' : 'Scanned'} onClose={onClose}>
+      {state === 'loading' && <p className="muted">Looking up {code}…</p>}
+      {state === 'error' && (
+        <>
+          <p className="small muted">Couldn't reach the food database. Check your connection, or enter the numbers from the label.</p>
+          <button className="btn" onClick={() => setState('missing')}>Enter from the label</button>
+        </>
+      )}
+      {(state === 'found' || state === 'missing') && (
+        <>
+          {state === 'found' ? (
+            <div>
+              <h3 style={{ fontSize: 20 }}>{title}</h3>
+              <p className="small muted">Per 100 g: {per100.kcal} kcal · P {per100.protein} · C {per100.carbs} · F {per100.fat}</p>
+            </div>
+          ) : (
+            <>
+              <p className="small muted">{product ? 'This product has no nutrition facts yet.' : `Barcode ${code} isn't in the database yet.`} Copy them from the label once; next scan is instant.</p>
+              <label>Name<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Skyr naturell" /></label>
+              <div className="form-grid4">
+                {(['kcal', 'protein', 'carbs', 'fat'] as const).map(k => (
+                  <label key={k}>{k === 'kcal' ? 'kcal' : `${k[0].toUpperCase()}${k.slice(1)}`}/100 g
+                    <input inputMode="decimal" value={form[k]} onChange={e => setForm({ ...form, [k]: e.target.value })} />
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+          <label>How much did you eat? (grams)
+            <input inputMode="decimal" value={grams} onChange={e => setGrams(e.target.value)} onFocus={e => e.target.select()} />
+          </label>
+          <div className="chips">
+            {product?.servingGrams && <button className="chip-btn" onClick={() => setGrams(String(Math.round(product.servingGrams!)))}>1 serving · {Math.round(product.servingGrams)} g</button>}
+            <button className="chip-btn" onClick={() => setGrams('100')}>100 g</button>
+          </div>
+          <div className="seg seg-sm" role="group" aria-label="Meal">
+            {MEALS.map(m => <button key={m} aria-pressed={meal === m} onClick={() => setMeal(m)}>{MEAL_LABEL[m]}</button>)}
+          </div>
+          <div className="card" style={{ padding: 14, gap: 4 }}>
+            <span style={{ fontSize: 28, fontWeight: 700 }}>{Math.round(per100.kcal * f)} <span className="muted" style={{ fontSize: 15, fontWeight: 400 }}>kcal</span></span>
+            <span className="small muted">P {round1(per100.protein * f)} g · C {round1(per100.carbs * f)} g · F {round1(per100.fat * f)} g</span>
+          </div>
+          <button className="btn btn-primary btn-big" onClick={add} disabled={busy || !title || g <= 0 || (state === 'missing' && !form.kcal)}>{busy ? 'Adding…' : 'Add'}</button>
+          <button className="btn-text" style={{ alignSelf: 'center' }} onClick={onRescan}>Scan another</button>
+          <p className="tiny muted">Product data: Open Food Facts (openfoodfacts.org).</p>
+        </>
+      )}
+    </Sheet>
   )
 }
 
@@ -169,8 +274,8 @@ function entryFrom(f: Pick<Food, 'name' | 'serving' | 'kcal' | 'protein' | 'carb
   } satisfies Omit<FoodEntry, 'id' | 'eaten_at'> & { eaten_at?: string }
 }
 
-function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded }: {
-  api: Api; foods: Food[]; meal: Meal; offset: number; onClose: () => void; onAdded: (name: string) => void
+function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onScan }: {
+  api: Api; foods: Food[]; meal: Meal; offset: number; onClose: () => void; onAdded: (name: string) => void; onScan: () => void
 }) {
   const [q, setQ] = useState('')
   const [meal, setMeal] = useState<Meal>(initialMeal)
@@ -224,9 +329,12 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded }: {
         </div>
       ) : (
         <>
-          <div className="search">
-            <IconSearch />
-            <input autoFocus value={q} onChange={e => { setQ(e.target.value); setCreating(false) }} placeholder="Search your foods or type a new one" aria-label="Food name" />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div className="search" style={{ flex: 1 }}>
+              <IconSearch />
+              <input autoFocus value={q} onChange={e => { setQ(e.target.value); setCreating(false) }} placeholder="Search your foods or type a new one" aria-label="Food name" />
+            </div>
+            <button className="square-btn" aria-label="Scan a barcode" onClick={onScan}><ScanBarcode size={20} strokeWidth={2} /></button>
           </div>
           {query && !foods.some(f => f.name.toLowerCase() === query) && !creating && (
             <button className="btn btn-soft" onClick={() => setCreating(true)}>+ Create “{q.trim()}”</button>

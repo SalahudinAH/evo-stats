@@ -4,8 +4,8 @@ import { useLoad, useNow, useTraining } from '../lib/hooks'
 import { countSince, startOfWeek, weekStreak } from '../lib/stats'
 import { buildDraft } from '../lib/draft'
 import { findPRs, nextRoutine, previousWorkout, volume, workingSets } from '../lib/training'
-import { fmtClock, fmtDuration, IconPin, IconPlay, MacroBar, Ring, Spark } from '../components/ui'
-import { IconDumbbell } from '../App'
+import { Check, ChevronRight, Dumbbell, Flame, MapPin, Play } from 'lucide-react'
+import { fmtClock, fmtDuration, LargeTitle, Ring, Row, Section, Spark } from '../components/ui'
 import { dayRange, sumMacros } from './Food'
 
 export function Today({ nav }: { nav: Nav }) {
@@ -53,114 +53,94 @@ export function Today({ nav }: { nav: Nav }) {
   }
 
 
+  const pct = (v: number, goal: number | undefined) => `${goal ? Math.min(100, (v / goal) * 100) : 0}%`
+  const workoutDays = (() => {
+    const out: boolean[] = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart); d.setDate(d.getDate() + i)
+      out.push(thisWeekVisits.some(v => new Date(v.visited_at).toDateString() === d.toDateString()))
+    }
+    return out
+  })()
+
   return (
     <div className="screen">
-      <header className="screen-head">
-        <div>
-          <p className="sub" style={{ marginTop: 0 }}>{new Date(now).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-          <h1>Today</h1>
-        </div>
-        {streak > 0 && <span className="pill">{streak} week streak</span>}
-      </header>
+      <LargeTitle title="Today" sub={new Date(now).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+        actions={streak > 0 ? <span className="nav-pill"><Flame size={18} strokeWidth={2} aria-hidden="true" />{streak} week{streak === 1 ? '' : 's'}</span> : null} />
 
       {(visits.error || t.error) && <p className="error">{visits.error ?? t.error}</p>}
 
       {nav.draft && (
-        <button className="card card-accent card-btn resume" onClick={nav.openWorkout}>
-          <div className="grow">
-            <h3>{nav.draft.finished_at ? `${nav.draft.name} isn't saved yet` : `Workout in progress · ${nav.draft.name}`}</h3>
-            <span className="small muted">{nav.draft.finished_at ? 'Open the summary to save it' : `${fmtClock(now - new Date(nav.draft.started_at).getTime())} elapsed`}</span>
-          </div>
-          <span className="btn btn-primary btn-small">{nav.draft.finished_at ? 'Open' : 'Resume'}</span>
-        </button>
+        <Section>
+          <Row icon={<Dumbbell size={17} strokeWidth={2} />} onClick={nav.openWorkout}
+            title={nav.draft.finished_at ? `${nav.draft.name} isn't saved yet` : `Workout in progress · ${nav.draft.name}`}
+            sub={nav.draft.finished_at ? 'Open the summary to save it' : `${fmtClock(now - new Date(nav.draft.started_at).getTime())} elapsed`}
+            trail={<span className="pill-btn">{nav.draft.finished_at ? 'Open' : 'Resume'}</span>} />
+        </Section>
       )}
 
-      <section className="card" aria-label="Gym check-in" style={{ gap: 10 }}>
-        <div className="resume">
-          <span className="pr-ic" style={{ width: 40, height: 40, borderRadius: 12 }}><IconPin /></span>
-          <div className="grow">
-            {checkedIn
-              ? <><h3>At {lastVisit.club_name ?? 'the gym'} · {new Date(lastVisit.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</h3>
-                <span className="tiny muted">{lastVisit.source === 'manual' ? 'Checked in by you' : 'Checked in automatically'}</span></>
-              : <><h3>Not checked in</h3><span className="tiny muted">{favorite?.name ?? 'Shortcuts check you in on arrival'}</span></>}
-          </div>
-          {!checkedIn && <button className="btn btn-primary btn-small" onClick={checkIn} disabled={busy}>{busy ? '…' : 'Check in'}</button>}
-        </div>
-        <div className="mini-stats">
-          <div><b className="text-accent">{visits.data ? countSince(list, 30) : '–'}</b><span>30 days</span></div>
-          <div><b>{visits.data ? countSince(list, 182) : '–'}</b><span>6 months</span></div>
-          <div><b>{visits.data ? countSince(list, 365) : '–'}</b><span>12 months</span></div>
-        </div>
-      </section>
-
-      <button className="card card-btn" onClick={() => nav.go('food')} aria-label="Calories today. Open Food">
-        <div className="card-head" style={{ alignItems: 'center' }}>
-          <h2>Calories</h2>
-          <span className="small text-accent" style={{ fontWeight: 650 }}>Log food ›</span>
-        </div>
+      <button className="hero-v2 card-btn" onClick={() => nav.go('food')} aria-label="Calories today. Open Food" style={{ border: 0, padding: 16, display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          <Ring value={eaten.kcal} max={g?.kcal ?? 1} size={100} stroke={11}>
-            <span className="num" style={{ fontSize: 24 }}>{g ? Math.abs(Math.round(g.kcal - eaten.kcal)).toLocaleString('en-GB') : '–'}</span>
-            <span className="tiny muted">{g && eaten.kcal > g.kcal ? 'kcal over' : 'kcal left'}</span>
+          <Ring value={eaten.kcal} max={g?.kcal ?? 1} size={104} stroke={12}>
+            <Flame size={22} strokeWidth={2} color="var(--accent-text)" aria-hidden="true" />
           </Ring>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <MacroBar name="Protein" value={eaten.protein} goal={g?.protein ?? 0} color="var(--protein)" />
-            <MacroBar name="Carbs" value={eaten.carbs} goal={g?.carbs ?? 0} color="var(--carbs)" />
-            <MacroBar name="Fat" value={eaten.fat} goal={g?.fat ?? 0} color="var(--fat)" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {g ? Math.abs(Math.round(g.kcal - eaten.kcal)).toLocaleString('en-GB') : '–'}
+            </span>
+            <span className="muted" style={{ fontSize: 15 }}>{g && eaten.kcal > g.kcal ? 'kcal over' : 'kcal left'} of {g?.kcal.toLocaleString('en-GB') ?? '–'}</span>
           </div>
+          <ChevronRight className="row-chev" size={18} strokeWidth={2.4} style={{ marginLeft: 'auto' }} aria-hidden="true" />
+        </div>
+        <div className="macro3">
+          <div><span className="k">Protein</span><span className="v">{Math.round(eaten.protein)}<span> / {g?.protein ?? '–'} g</span></span><span className="b"><span style={{ width: pct(eaten.protein, g?.protein), background: 'var(--protein)' }} /></span></div>
+          <div><span className="k">Carbs</span><span className="v">{Math.round(eaten.carbs)}<span> / {g?.carbs ?? '–'} g</span></span><span className="b"><span style={{ width: pct(eaten.carbs, g?.carbs), background: 'var(--carbs)' }} /></span></div>
+          <div><span className="k">Fat</span><span className="v">{Math.round(eaten.fat)}<span> / {g?.fat ?? '–'} g</span></span><span className="b"><span style={{ width: pct(eaten.fat, g?.fat), background: 'var(--fat)' }} /></span></div>
         </div>
       </button>
 
-      {t.data && todaysWorkout && (() => {
-        const sets = workingSets(t.data.sets.filter(s => s.workout_id === todaysWorkout.id))
-        const prev = previousWorkout(todaysWorkout, t.data.workouts)
-        const prevVol = prev ? volume(workingSets(t.data.sets.filter(s => s.workout_id === prev.id))) : 0
-        const vol = volume(sets)
-        const byEx = new Map<string, typeof sets>()
-        for (const s of sets) byEx.set(s.exercise_id, [...(byEx.get(s.exercise_id) ?? []), s])
-        const prs = findPRs(byEx, t.data.sessions, new Date(todaysWorkout.started_at)).length
-        return (
-          <button className="card card-accent card-btn resume" onClick={() => nav.go('train')}>
-            <span className="pr-ic" style={{ width: 44, height: 44, borderRadius: 14 }}><IconDumbbell /></span>
-            <div className="grow">
-              <h3>{todaysWorkout.name} done</h3>
-              <span className="small" style={{ color: '#e0c2cf' }}>
-                {fmtDuration(new Date(todaysWorkout.finished_at).getTime() - new Date(todaysWorkout.started_at).getTime())} · {Math.round(vol).toLocaleString('en-GB')} kg{prs ? ` · ${prs} PR${prs === 1 ? '' : 's'}` : ''}
-              </span>
+      <Section title="Gym" className="icons">
+        <Row icon={<MapPin size={17} strokeWidth={2} />}
+          title={checkedIn ? `At ${lastVisit.club_name ?? 'the gym'} · ${new Date(lastVisit.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : 'Not checked in'}
+          sub={checkedIn ? (lastVisit.source === 'manual' ? 'Checked in by you' : 'Checked in automatically') : (favorite?.name ?? 'Shortcuts check you in on arrival')}
+          trail={checkedIn ? undefined : <button className="pill-btn" onClick={checkIn} disabled={busy}>{busy ? '…' : 'Check in'}</button>} />
+        <div className="group-block" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+          {([[30, 'last 30 days'], [182, '6 months'], [365, '12 months']] as const).map(([d, l]) => (
+            <div key={d} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontSize: 22, fontWeight: 700 }}>{visits.data ? countSince(list, d) : '–'}</span>
+              <span className="row-sub">{l}</span>
             </div>
-            {prevVol > 0 && <span className={`small ${vol >= prevVol ? 'text-up' : 'text-down'}`} style={{ fontWeight: 700 }}>{vol >= prevVol ? '▲' : '▼'} {Math.abs(((vol - prevVol) / prevVol) * 100).toFixed(1)}%</span>}
-          </button>
-        )
-      })()}
-      {t.data && !todaysWorkout && !nav.draft && next && (
-        <section className="card resume">
-          <span className="pr-ic" style={{ width: 44, height: 44, borderRadius: 14 }}><IconDumbbell /></span>
-          <div className="grow"><h3>Up next: {next.name}</h3><span className="small muted">{t.data.items.filter(i => i.routine_id === next.id).length} exercises</span></div>
-          <button className="btn btn-primary btn-small" onClick={() => nav.startWorkout(buildDraft(next, t.data!.items, t.data!.sessions))}><IconPlay /> Begin</button>
-        </section>
-      )}
-
-      <div className="grid2">
-        <button className="card card-btn" onClick={() => nav.go('progress')} style={{ gap: 6, padding: 14 }}>
-          <span className="small muted">Body weight</span>
-          <span className="num" style={{ fontSize: 26 }}>{latestW ? latestW.kg.toFixed(1) : '–'} <span className="small muted">kg</span></span>
-          <Spark values={w.slice(-10).map(x => x.kg)} width={130} height={34} />
-          <span className="tiny muted">{weekAvg ? `7-day avg ${weekAvg.toFixed(1)}` : 'No entries this week'}</span>
-        </button>
-        <div className="card" style={{ gap: 6, padding: 14 }}>
-          <span className="small muted">Gym this week</span>
-          <span className="num" style={{ fontSize: 26 }}>{thisWeekVisits.length} <span className="small muted">of {g?.workouts_per_week ?? 4}</span></span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4, alignItems: 'end', height: 34 }} aria-hidden="true">
-            {Array.from({ length: 7 }, (_, i) => {
-              const d = new Date(weekStart); d.setDate(d.getDate() + i)
-              const went = thisWeekVisits.some(v => new Date(v.visited_at).toDateString() === d.toDateString())
-              return <div key={i} style={{ height: went ? 34 : 6, borderRadius: 3, background: went ? 'var(--accent)' : 'var(--surface-2)' }} />
-            })}
-          </div>
-          <span className="tiny muted">M T W T F S S</span>
+          ))}
         </div>
-      </div>
+        {t.data && todaysWorkout && (() => {
+          const sets = workingSets(t.data.sets.filter(x => x.workout_id === todaysWorkout.id))
+          const byEx = new Map<string, typeof sets>()
+          for (const x of sets) byEx.set(x.exercise_id, [...(byEx.get(x.exercise_id) ?? []), x])
+          const prs = findPRs(byEx, t.data.sessions, new Date(todaysWorkout.started_at)).length
+          const prev = previousWorkout(todaysWorkout, t.data.workouts)
+          const prevVol = prev ? volume(workingSets(t.data.sets.filter(x => x.workout_id === prev.id))) : 0
+          const vol = volume(sets)
+          return (
+            <Row icon={<Check size={17} strokeWidth={2.4} />} iconTone="up" onClick={() => nav.go('train')} chevron
+              title={`${todaysWorkout.name} done`}
+              sub={`${fmtDuration(new Date(todaysWorkout.finished_at).getTime() - new Date(todaysWorkout.started_at).getTime())} · ${Math.round(vol).toLocaleString('en-GB')} kg${prs ? ` · ${prs} PR${prs === 1 ? '' : 's'}` : ''}`}
+              trail={prevVol > 0 ? <span className={vol >= prevVol ? 'text-up' : 'text-down'} style={{ fontWeight: 600 }}>{vol >= prevVol ? '+' : '−'}{Math.abs(((vol - prevVol) / prevVol) * 100).toFixed(0)}%</span> : undefined} />
+          )
+        })()}
+        {t.data && !todaysWorkout && !nav.draft && next && (
+          <Row icon={<Dumbbell size={17} strokeWidth={2} />} title={`Up next: ${next.name}`}
+            sub={`${t.data.items.filter(i => i.routine_id === next.id).length} exercises`}
+            trail={<button className="circle-btn" aria-label={`Start ${next.name}`} onClick={() => nav.startWorkout(buildDraft(next, t.data!.items, t.data!.sessions))}><Play size={14} fill="currentColor" strokeWidth={0} /></button>} />
+        )}
+      </Section>
 
+      <Section title="Body">
+        <Row onClick={() => nav.go('progress')} chevron title="Weight"
+          sub={weekAvg ? `7-day average ${weekAvg.toFixed(1)}` : 'No entries this week'}
+          trail={<span style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Spark values={w.slice(-10).map(x => x.kg)} width={64} height={24} /><span style={{ color: 'var(--text)', fontSize: 17, fontWeight: 600 }}>{latestW ? `${latestW.kg.toFixed(1)} kg` : '–'}</span></span>} />
+        <Row title="This week" sub={`${thisWeekVisits.length} of ${g?.workouts_per_week ?? 4} workouts`}
+          trail={<span className="dots7" aria-hidden="true">{workoutDays.map((on, i) => <span key={i} className={on ? 'on' : ''} />)}</span>} />
+      </Section>
     </div>
   )
 }

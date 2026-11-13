@@ -130,10 +130,18 @@ export function createSupabaseApi(): Api {
     async deleteWeight(id) { check(await db.from('weights').delete().eq('id', id)) },
 
     async listExercises() {
-      return check(await db.from('exercises').select('id, name, muscle').order('name')) as Exercise[]
+      const res = await db.from('exercises').select('id, name, muscle, image').order('name')
+      if (res.error?.code === '42703') {
+        // Database not updated yet: no image column.
+        const old = check(await db.from('exercises').select('id, name, muscle').order('name')) as Exercise[]
+        return old.map(e => ({ ...e, image: null }))
+      }
+      return check(res) as Exercise[]
     },
-    async addExercise(name, muscle) {
-      return check(await db.from('exercises').insert({ name, muscle }).select('id, name, muscle').single()) as Exercise
+    async addExercise(name, muscle, image = null) {
+      const row = image ? { name, muscle, image } : { name, muscle }
+      const e = check(await db.from('exercises').insert(row).select('*').single()) as Exercise
+      return { ...e, image: e.image ?? null }
     },
     async updateExercise(id, patch) { check(await db.from('exercises').update(patch).eq('id', id)) },
     async deleteExercise(id) { check(await db.from('exercises').delete().eq('id', id)) },
@@ -177,11 +185,12 @@ export function createSupabaseApi(): Api {
     async deleteWorkout(id) { check(await db.from('workouts').delete().eq('id', id)) },
 
     async listFoods() {
-      const rows = check(await db.from('foods').select('id, name, serving, kcal, protein, carbs, fat').order('name')) as Food[]
+      const res = await db.from('foods').select('*').order('name')
+      const rows = check(res) as Food[]
       return rows.map(numMacros)
     },
     async addFood(f) {
-      return numMacros(check(await db.from('foods').insert(f).select('id, name, serving, kcal, protein, carbs, fat').single()) as Food)
+      return numMacros(check(await db.from('foods').insert(f.barcode ? f : { ...f, barcode: undefined }).select('*').single()) as Food)
     },
     async deleteFood(id) { check(await db.from('foods').delete().eq('id', id)) },
     async listFoodEntries(fromIso, toIso) {
