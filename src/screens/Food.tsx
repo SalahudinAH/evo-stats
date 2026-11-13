@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
 import type { Nav } from '../App'
 import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
 import { useLoad } from '../lib/hooks'
@@ -92,7 +92,10 @@ export function FoodScreen({ nav }: { nav: Nav }) {
             <span style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: left < 0 ? 'var(--warn)' : undefined }}>{g ? Math.abs(left).toLocaleString('en-GB') : '–'}</span>
             <span className="muted" style={{ fontSize: 15 }}>{left < 0 ? 'kcal over' : 'kcal left'}</span>
           </div>
-          <span className="muted" style={{ fontSize: 15 }}>{Math.round(total.kcal).toLocaleString('en-GB')} of {g?.kcal.toLocaleString('en-GB') ?? '–'}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="muted" style={{ fontSize: 15 }}>{Math.round(total.kcal).toLocaleString('en-GB')} of {g?.kcal.toLocaleString('en-GB') ?? '–'}</span>
+            <button className="edit-btn" aria-label="Edit calorie and macro goals" onClick={() => setEditGoals(true)} disabled={!g}><Pencil size={15} strokeWidth={2.2} /></button>
+          </span>
         </div>
         <div className={`kbar ${left < 0 ? 'over' : ''}`} style={{ height: 8 }}><div style={{ width: pct(total.kcal, g?.kcal) }} /></div>
         <div className="macro3">

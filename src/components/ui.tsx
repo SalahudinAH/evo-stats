@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Check, ChevronRight, Dumbbell, Plus } from 'lucide-react'
 import { MUSCLES, type Api, type Exercise, type Muscle } from '../lib/types'
@@ -55,7 +56,8 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
     document.body.style.overflow = 'hidden'
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
   }, [onClose])
-  return (
+  // Rendered into <body> so it always sits above the tab bar, whatever scroll container opened it.
+  return createPortal(
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()}>
         <div className="sheet-grab" />
@@ -65,7 +67,8 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
