@@ -527,10 +527,3 @@ a.pill-btn { text-decoration: none; }
 .nav-bar:has(> .nav-back) { justify-content: space-between; }
 .nav-back { appearance: none; border: 0; background: none; color: var(--accent-text); font-size: 17px; height: 44px; padding: 0 10px 0 2px; margin-right: auto; display: inline-flex; align-items: center; gap: 2px; cursor: pointer; white-space: nowrap; }
 
-/* Home-screen iPhone where the page stops above the home indicator (see lib/standalone.ts). */
-html.ios-short, html.ios-short body { background: #161616; }
-html.ios-short .tabbar { padding-bottom: 4px; background: #161616; }
-html.ios-short main.no-tabbar { padding-bottom: 24px; }
-html.ios-short .sheet { padding-bottom: 18px; }
-html.ios-short .rest-pill { bottom: 16px; }
-html.ios-short .app { background: var(--bg); }
