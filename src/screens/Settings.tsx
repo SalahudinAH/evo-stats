@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Api } from '../lib/types'
 import { useLoad } from '../lib/hooks'
-import { SUPABASE_KEY, SUPABASE_URL } from '../lib/supabaseApi'
+import { SUPABASE_KEY, SUPABASE_URL, supabase } from '../lib/supabaseApi'
 
-function Copy({ label, value }: { label: string; value: string }) {
+function Copy({ label, value, secret = false }: { label: string; value: string; secret?: boolean }) {
   const [done, setDone] = useState(false)
+  const [shown, setShown] = useState(!secret)
   async function copy() {
     try {
       await navigator.clipboard.writeText(value)
@@ -24,7 +25,8 @@ function Copy({ label, value }: { label: string; value: string }) {
     <div className="copy">
       <div className="copy-label">{label}</div>
       <div className="copy-row">
-        <code>{value}</code>
+        <code>{shown ? value : `••••••••••••${value.slice(-4)}`}</code>
+        {secret && <button className="btn btn-small" onClick={() => setShown(v => !v)}>{shown ? 'Hide' : 'Show'}</button>}
         <button className="btn btn-small" onClick={copy}>{done ? 'Copied' : 'Copy'}</button>
       </div>
     </div>
@@ -36,8 +38,14 @@ export function Settings({ api, notify }: { api: Api; notify: (m: string) => voi
   const clubs = useLoad(() => api.listClubs(), [api])
   const base = api.mode === 'demo' ? 'https://YOUR-PROJECT.supabase.co' : SUPABASE_URL.replace(/\/$/, '')
   const pubKey = api.mode === 'demo' ? 'sb_publishable_…' : SUPABASE_KEY
-  const token = key.data ?? 'CREATE-A-KEY-FIRST'
+  // The real key is only shown (masked) above, never in the examples below.
+  const token = key.data ? 'YOUR-SHORTCUT-KEY' : 'CREATE-A-KEY-FIRST'
   const club = clubs.data?.find(c => c.is_favorite)?.name ?? 'EVO Home club'
+  const [email, setEmail] = useState<string | null>(null)
+  useEffect(() => {
+    if (api.mode === 'demo') return
+    supabase().auth.getSession().then(({ data }) => setEmail(data.session?.user.email ?? null))
+  }, [api])
 
   async function rotate() {
     if (key.data && !confirm('Make a new key? Shortcuts using the old key will stop working until you update them.')) return
@@ -54,7 +62,7 @@ export function Settings({ api, notify }: { api: Api; notify: (m: string) => voi
         <h2>1. Your Shortcut key</h2>
         <p className="muted small">A private key that lets your iPhone's Shortcuts log visits and weight without signing in. Don't share it. If it leaks, make a new one.</p>
         {key.data
-          ? <Copy label="Shortcut key" value={key.data} />
+          ? <Copy label="Shortcut key" value={key.data} secret />
           : <p className="muted small">No key yet.</p>}
         <button className="btn" onClick={rotate}>{key.data ? 'Make a new key' : 'Create key'}</button>
       </section>
@@ -107,7 +115,7 @@ p_measured_at  [Formatted Date]   (Text)`}</pre>
 
       <section className="card">
         <h2>Account</h2>
-        <p className="muted small">{api.mode === 'demo' ? 'Demo mode: nothing is saved.' : `Connected to ${base.replace('https://', '')}`}</p>
+        <p className="muted small">{api.mode === 'demo' ? 'Demo mode: nothing is saved.' : email ? `Signed in as ${email}` : 'Signed in'}</p>
         <button className="btn" onClick={() => api.signOut()}>{api.mode === 'demo' ? 'Leave demo' : 'Sign out'}</button>
         {api.mode !== 'demo' && (
           <button className="btn btn-danger-quiet" onClick={async () => {
