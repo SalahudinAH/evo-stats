@@ -25,7 +25,7 @@ export default function App() {
 
 function DemoShell() {
   const api = useMemo(createDemoApi, [])
-  return <Shell api={api} />
+  return <Shell api={api} owner="demo" />
 }
 
 /** An expired or used email link comes back as #error_description=… */
@@ -53,7 +53,8 @@ function AuthGate() {
   if (session === undefined) return <div className="center-screen muted">Loading…</div>
   if (session && recovering) return <NewPassword onDone={() => setRecovering(false)} />
   if (!session || !api) return <Login initialError={linkError} />
-  return <Shell api={api} />
+  // key: a different account gets a completely fresh app state.
+  return <Shell key={session.user.id} api={api} owner={session.user.id} />
 }
 
 const OLD_HASHES: Record<string, Tab> = { home: 'today', strength: 'train', weight: 'progress', clubs: 'more', settings: 'more' }
@@ -75,10 +76,10 @@ export interface Nav {
   openWorkout: () => void
 }
 
-function Shell({ api }: { api: Api }) {
+function Shell({ api, owner }: { api: Api; owner: string }) {
   const [tab, setTab] = useState<Tab>(readTab)
   const [toast, setToast] = useState<string | null>(null)
-  const [draft, setDraftState] = useState<Draft | null>(() => loadDraft(api.mode))
+  const [draft, setDraftState] = useState<Draft | null>(() => loadDraft(owner))
   const [workoutOpen, setWorkoutOpen] = useState(false)
   const timer = useRef<number>()
 
@@ -97,10 +98,10 @@ function Shell({ api }: { api: Api }) {
   const setDraft = useCallback((d: Draft | null | ((cur: Draft) => Draft)) => {
     setDraftState(cur => {
       const next = typeof d === 'function' ? (cur ? d(cur) : null) : d
-      storeDraft(api.mode, next)
+      storeDraft(owner, next)
       return next
     })
-  }, [api.mode])
+  }, [owner])
 
   const go = useCallback((t: Tab) => {
     window.location.hash = t

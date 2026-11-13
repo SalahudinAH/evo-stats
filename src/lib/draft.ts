@@ -36,21 +36,27 @@ export interface Draft {
   notes: string
 }
 
-const key = (mode: string) => `evo-stats.draft.${mode}`
+/** One saved workout per account, so a second account on the same phone never sees it. */
+const key = (owner: string) => `evo-stats.draft.${owner}`
 
-export function loadDraft(mode: string): Draft | null {
+// Before drafts were per account they were all saved under this one name.
+// Its owner is unknown, so it's dropped rather than shown to whoever signs in.
+try { localStorage.removeItem('evo-stats.draft.supabase') } catch { /* storage blocked */ }
+
+/** `owner` is the signed-in user's id, or "demo". */
+export function loadDraft(owner: string): Draft | null {
   try {
-    const raw = localStorage.getItem(key(mode))
+    const raw = localStorage.getItem(key(owner))
     return raw ? (JSON.parse(raw) as Draft) : null
   } catch {
     return null
   }
 }
 
-export function storeDraft(mode: string, d: Draft | null) {
+export function storeDraft(owner: string, d: Draft | null) {
   try {
-    if (d) localStorage.setItem(key(mode), JSON.stringify(d))
-    else localStorage.removeItem(key(mode))
+    if (d) localStorage.setItem(key(owner), JSON.stringify(d))
+    else localStorage.removeItem(key(owner))
   } catch {
     // Private browsing can block storage; the workout still works until the page closes.
   }
