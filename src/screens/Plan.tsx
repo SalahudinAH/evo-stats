@@ -1,3 +1,4 @@
+import { ChevronLeft } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { Activity, Api, Goals, PlanId, Sex } from '../lib/types'
 import { ACTIVITY, ageFrom, macrosFor, maintenance, planOptions, restingBurn } from '../lib/nutrition'
@@ -111,7 +112,7 @@ export function PlanSetup({ api, goals, latestWeight, firstTime, onDone, onSkip 
   return (
     <div className="screen">
       <header className="screen-head">
-        <button className="back" onClick={() => setStep(1)}>‹ Details</button>
+        <button className="nav-back" onClick={() => setStep(1)}><ChevronLeft size={24} strokeWidth={2.2} />Details</button>
       </header>
       <div className="detail-title">
         <h1>Pick a plan</h1>

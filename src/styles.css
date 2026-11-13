@@ -523,3 +523,6 @@ button.group-row:active, a.group-row:active { background: var(--surface-2); }
 .update-banner { position: fixed; z-index: 60; top: calc(env(safe-area-inset-top) + 8px); left: 50%; transform: translateX(-50%); appearance: none; border: 0; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 9px 9px 9px 16px; border-radius: 22px; background: #2c2c2e; color: var(--text); font-size: 14px; font-weight: 600; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); white-space: nowrap; animation: fade 0.2s ease-out; }
 .update-banner span { background: var(--accent); color: #fff; border-radius: 14px; padding: 5px 12px; }
 a.pill-btn { text-decoration: none; }
+/* Back button: top left, like iOS. */
+.nav-bar:has(> .nav-back) { justify-content: space-between; }
+.nav-back { appearance: none; border: 0; background: none; color: var(--accent-text); font-size: 17px; height: 44px; padding: 0 10px 0 2px; margin-right: auto; display: inline-flex; align-items: center; gap: 2px; cursor: pointer; white-space: nowrap; }

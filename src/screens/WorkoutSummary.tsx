@@ -1,3 +1,4 @@
+import { ChevronLeft } from 'lucide-react'
 import { useState } from 'react'
 import type { Nav } from '../App'
 import type { Workout } from '../lib/types'
@@ -200,7 +201,7 @@ export function WorkoutSummary({ nav, draft, setDraft, onSaved, onDiscard }: {
   return (
     <div className="screen">
       <header className="screen-head">
-        <button className="back" onClick={() => setDraft(d => ({ ...d, finished_at: null }))}>‹ Back to workout</button>
+        <button className="nav-back" onClick={() => setDraft(d => ({ ...d, finished_at: null }))}><ChevronLeft size={24} strokeWidth={2.2} />Back to workout</button>
       </header>
       <div className="done-head">
         <span className="done-ic"><IconCheck size={28} /></span>

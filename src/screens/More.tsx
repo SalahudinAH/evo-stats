@@ -30,7 +30,7 @@ export function More({ nav }: { nav: Nav }) {
   if (sub) {
     return (
       <div className="screen">
-        <div className="nav-bar"><button className="nav-btn nav-text" onClick={() => open(null)}><ChevronLeft size={24} strokeWidth={2.2} />More</button></div>
+        <div className="nav-bar"><button className="nav-back" onClick={() => open(null)}><ChevronLeft size={24} strokeWidth={2.2} />More</button></div>
         {sub === 'clubs' && <Clubs api={nav.api} notify={nav.notify} />}
         {sub === 'visits' && <VisitHistory nav={nav} />}
         {sub === 'weight' && <WeightScreen api={nav.api} notify={nav.notify} />}

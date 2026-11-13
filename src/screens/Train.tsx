@@ -9,7 +9,7 @@ import {
   bestE1rm, fmtKg, insights, MUSCLE_LABEL, nextRoutine, setsText, suggest, volume, workingSets,
 } from '../lib/training'
 import { LineChart } from '../components/Charts'
-import { Calendar, Check, Clock, Dumbbell, History, ListChecks, Play, Plus, Target, TrendingUp, TriangleAlert } from 'lucide-react'
+import { Calendar, Check, ChevronLeft, Clock, Dumbbell, History, ListChecks, Play, Plus, Target, TrendingUp, TriangleAlert } from 'lucide-react'
 import {
   ExercisePicker, ExerciseThumb, fmtClock, fmtDay, fmtDuration, IconDots, IconDown, IconPlay, IconUp, LargeTitle, MuscleSelect, Row, Section, Sheet,
 } from '../components/ui'
@@ -51,7 +51,7 @@ export function Train({ nav }: { nav: Nav }) {
       if (!w) return <TrainHome nav={nav} data={data} goal={goals.data?.workouts_per_week ?? 4} open={open} reload={t.reload} />
       return (
         <div className="screen">
-          <header className="screen-head"><button className="back" onClick={back}>‹ Back</button></header>
+          <header className="screen-head"><button className="nav-back" onClick={back}><ChevronLeft size={24} strokeWidth={2.2} />Back</button></header>
           <WorkoutReport data={data} report={reportFromWorkout(w, data)}
             onExercise={id => open({ kind: 'exercise', id, from: view })} />
           <button className="btn btn-danger-quiet" onClick={async () => {
@@ -66,7 +66,7 @@ export function Train({ nav }: { nav: Nav }) {
     case 'history':
       return (
         <div className="screen">
-          <header className="screen-head"><button className="back" onClick={() => open({ kind: 'home' })}>‹ Train</button></header>
+          <header className="screen-head"><button className="nav-back" onClick={() => open({ kind: 'home' })}><ChevronLeft size={24} strokeWidth={2.2} />Train</button></header>
           <h1 className="detail-title">History</h1>
           {!data.workouts.length && <p className="muted">No workouts yet.</p>}
           {data.workouts.length > 0 && (
@@ -334,7 +334,7 @@ function RoutineDetail({ nav, data, routine, back, open, reload }: {
   return (
     <div className="screen" style={{ paddingBottom: editing ? 0 : 70 }}>
       <header className="screen-head">
-        <button className="back" onClick={back}>‹ Train</button>
+        <button className="nav-back" onClick={back}><ChevronLeft size={24} strokeWidth={2.2} />Train</button>
         {editing
           ? <button className="btn-text" disabled={saving} onClick={async () => { await save(); setEditing(false) }}>{saving ? 'Saving…' : 'Done'}</button>
           : <button className="btn-text" onClick={() => setEditing(true)}>Edit</button>}
@@ -459,7 +459,7 @@ function ExerciseDetail({ api, data, exercise, back, reload, notify }: {
   return (
     <div className="screen">
       <header className="screen-head">
-        <button className="back" onClick={back}>‹ Back</button>
+        <button className="nav-back" onClick={back}><ChevronLeft size={24} strokeWidth={2.2} />Back</button>
         <button className="icon-btn" aria-label="Exercise options" onClick={() => setMenu(true)}><IconDots /></button>
       </header>
       {exercise.image && (
@@ -579,7 +579,7 @@ function ExerciseLibrary({ nav, data, back, open, reload }: {
   return (
     <div className="screen">
       <header className="screen-head">
-        <button className="back" onClick={back}>‹ Train</button>
+        <button className="nav-back" onClick={back}><ChevronLeft size={24} strokeWidth={2.2} />Train</button>
         <button className="btn-text" onClick={() => setPicking(true)}>+ New</button>
       </header>
       <h1 className="detail-title">Exercises</h1>
