@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { scrollToTop } from '../lib/scroll'
 import type { Nav } from '../App'
 import type { Api, Exercise, Muscle, Routine, RoutineItem, Workout } from '../lib/types'
 import { useLoad, useNow, useTraining, type TrainingData } from '../lib/hooks'
@@ -25,7 +26,7 @@ export function Train({ nav }: { nav: Nav }) {
   const t = useTraining(nav.api)
   const goals = useLoad(() => nav.api.getGoals(), [nav.api])
   const [view, setView] = useState<View>({ kind: 'home' })
-  const open = (v: View) => { setView(v); window.scrollTo({ top: 0 }) }
+  const open = (v: View) => { setView(v); scrollToTop() }
 
   if (t.error) return <div className="screen"><header className="screen-head"><h1>Train</h1></header><p className="error">{t.error}</p></div>
   if (!t.data) return <div className="screen"><header className="screen-head"><h1>Train</h1></header><p className="muted">Loading…</p></div>

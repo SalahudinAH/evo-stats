@@ -226,7 +226,7 @@ export function WorkoutSummary({ nav, draft, setDraft, onSaved, onDiscard }: {
         </label>
       </section>
 
-      <div className="bottom-bar" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 10px)' }}>
+      <div className="bottom-bar">
         <button className="btn btn-big" onClick={share}>Share</button>
         <button className="btn btn-primary btn-big" onClick={save} disabled={saving || !report.exercises.length}>
           {saving ? 'Saving…' : 'Save workout'}

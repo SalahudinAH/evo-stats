@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { scrollToTop } from '../lib/scroll'
 import type { Nav } from '../App'
 import { useNow, useTraining } from '../lib/hooks'
 import { draftExercise, draftSet, parseNum, validSet, type Draft, type DraftExercise, type DraftSet } from '../lib/draft'
@@ -60,7 +61,7 @@ export function ActiveWorkout({ nav, draft, setDraft, onMinimise, onDiscard }: {
     }
     if (unticked && !confirm(`${unticked} set${unticked === 1 ? ' has' : 's have'} reps typed in but not ticked off. Those won't be saved. Finish anyway?`)) return
     setDraft(d => ({ ...d, finished_at: new Date().toISOString(), restUntil: null }))
-    window.scrollTo({ top: 0 })
+    scrollToTop()
   }
 
   const exName = (id: string) => t.data?.exById.get(id)?.name ?? (t.data ? 'Deleted exercise' : '…')

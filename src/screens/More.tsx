@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { scrollToTop } from '../lib/scroll'
 import type { Nav } from '../App'
 import type { Visit } from '../lib/types'
 import { useLoad } from '../lib/hooks'
@@ -18,7 +19,7 @@ export function More({ nav }: { nav: Nav }) {
   const [sub, setSub] = useState<Sub>(null)
   const [goals, setGoals] = useState(false)
   const g = useLoad(() => nav.api.getGoals(), [nav.api])
-  const open = (s: Sub) => { setSub(s); window.scrollTo({ top: 0 }) }
+  const open = (s: Sub) => { setSub(s); scrollToTop() }
 
   if (sub) {
     return (

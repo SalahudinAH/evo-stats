@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { scrollToTop } from './lib/scroll'
 import type { Session } from '@supabase/supabase-js'
 import type { Api } from './lib/types'
 import { askToKeepStorage, createSupabaseApi, isConfigured, keepSignedIn, supabase } from './lib/supabaseApi'
@@ -107,7 +108,7 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
     window.location.hash = t
     setTab(t)
     setWorkoutOpen(false)
-    window.scrollTo({ top: 0 })
+    scrollToTop()
   }, [])
 
   const nav: Nav = {
@@ -116,9 +117,9 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
       if (draft) { notify('Finish or discard your current workout first'); setWorkoutOpen(true); return }
       setDraft(d)
       setWorkoutOpen(true)
-      window.scrollTo({ top: 0 })
+      scrollToTop()
     },
-    openWorkout: () => { setWorkoutOpen(true); window.scrollTo({ top: 0 }) },
+    openWorkout: () => { setWorkoutOpen(true); scrollToTop() },
   }
 
   const inWorkout = workoutOpen && draft
@@ -131,7 +132,7 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
   return (
     <div className="app">
       {api.mode === 'demo' && <div className="demo-banner">Demo data · nothing is saved</div>}
-      <main>
+      <main className={inWorkout ? 'no-tabbar' : undefined}>
         {inWorkout && !draft.finished_at && (
           <ActiveWorkout nav={nav} draft={draft} setDraft={setDraft}
             onMinimise={() => setWorkoutOpen(false)}

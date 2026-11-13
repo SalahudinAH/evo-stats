@@ -18,7 +18,6 @@ export function Today({ nav }: { nav: Nav }) {
   const food = useLoad(() => api.listFoodEntries(from.toISOString(), to.toISOString()), [api])
   const t = useTraining(api)
   const [busy, setBusy] = useState(false)
-  const [kg, setKg] = useState('')
   const now = useNow(30000)
 
   const list = visits.data ?? []
@@ -53,15 +52,6 @@ export function Today({ nav }: { nav: Nav }) {
     }
   }
 
-  async function logWeight(e: React.FormEvent) {
-    e.preventDefault()
-    const v = parseFloat(kg.replace(',', '.'))
-    if (!(v > 20 && v < 400)) return
-    await api.addWeight(Math.round(v * 100) / 100)
-    setKg('')
-    nav.notify('Weight saved')
-    weights.reload()
-  }
 
   return (
     <div className="screen">
@@ -85,23 +75,21 @@ export function Today({ nav }: { nav: Nav }) {
         </button>
       )}
 
-      <section className="card" aria-label="Gym check-in" style={{ gap: 12 }}>
+      <section className="card" aria-label="Gym check-in" style={{ gap: 10 }}>
         <div className="resume">
-          <span className="pr-ic" style={{ width: 44, height: 44, borderRadius: 14 }}><IconPin /></span>
+          <span className="pr-ic" style={{ width: 40, height: 40, borderRadius: 12 }}><IconPin /></span>
           <div className="grow">
             {checkedIn
-              ? <><h3>Checked in{lastVisit.club_name ? ` at ${lastVisit.club_name}` : ''} · {new Date(lastVisit.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</h3>
-                <span className="small muted">{lastVisit.source === 'manual' ? 'Logged by you' : 'Logged automatically'}</span></>
-              : <><h3>Not at the gym yet</h3><span className="small muted">Shortcuts check you in when you arrive</span></>}
+              ? <><h3>At {lastVisit.club_name ?? 'the gym'} · {new Date(lastVisit.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</h3>
+                <span className="tiny muted">{lastVisit.source === 'manual' ? 'Checked in by you' : 'Checked in automatically'}</span></>
+              : <><h3>Not checked in</h3><span className="tiny muted">{favorite?.name ?? 'Shortcuts check you in on arrival'}</span></>}
           </div>
+          {!checkedIn && <button className="btn btn-primary btn-small" onClick={checkIn} disabled={busy}>{busy ? '…' : 'Check in'}</button>}
         </div>
-        {!checkedIn && (
-          <button className="btn btn-primary" onClick={checkIn} disabled={busy}>{busy ? 'Logging…' : `I'm at the gym${favorite ? ` · ${favorite.name}` : ''}`}</button>
-        )}
-        <div className="stats3">
-          <div className="tile" style={{ textAlign: 'center' }}><span className="value text-accent">{visits.data ? countSince(list, 30) : '–'}</span><span className="label">Last 30 days</span></div>
-          <div className="tile" style={{ textAlign: 'center' }}><span className="value">{visits.data ? countSince(list, 182) : '–'}</span><span className="label">6 months</span></div>
-          <div className="tile" style={{ textAlign: 'center' }}><span className="value">{visits.data ? countSince(list, 365) : '–'}</span><span className="label">12 months</span></div>
+        <div className="mini-stats">
+          <div><b className="text-accent">{visits.data ? countSince(list, 30) : '–'}</b><span>30 days</span></div>
+          <div><b>{visits.data ? countSince(list, 182) : '–'}</b><span>6 months</span></div>
+          <div><b>{visits.data ? countSince(list, 365) : '–'}</b><span>12 months</span></div>
         </div>
       </section>
 
@@ -111,7 +99,7 @@ export function Today({ nav }: { nav: Nav }) {
           <span className="small text-accent" style={{ fontWeight: 650 }}>Log food ›</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          <Ring value={eaten.kcal} max={g?.kcal ?? 1}>
+          <Ring value={eaten.kcal} max={g?.kcal ?? 1} size={100} stroke={11}>
             <span className="num" style={{ fontSize: 24 }}>{g ? Math.abs(Math.round(g.kcal - eaten.kcal)).toLocaleString('en-GB') : '–'}</span>
             <span className="tiny muted">{g && eaten.kcal > g.kcal ? 'kcal over' : 'kcal left'}</span>
           </Ring>
@@ -173,10 +161,6 @@ export function Today({ nav }: { nav: Nav }) {
         </div>
       </div>
 
-      <form className="inline-form" onSubmit={logWeight}>
-        <input inputMode="decimal" value={kg} onChange={e => setKg(e.target.value)} placeholder="Log today's weight (kg)" aria-label="Weight in kg" />
-        <button className="btn btn-primary" disabled={!kg.trim()}>Save</button>
-      </form>
     </div>
   )
 }
