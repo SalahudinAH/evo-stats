@@ -194,8 +194,17 @@ export function createSupabaseApi(): Api {
     async deleteFoodEntry(id) { check(await db.from('food_entries').delete().eq('id', id)) },
 
     async getGoals() {
-      const rows = check(await db.from('user_settings').select('kcal, protein, carbs, fat, workouts_per_week').limit(1)) as Goals[]
-      return rows[0] ?? DEFAULT_GOALS
+      const res = await db.from('user_settings')
+        .select('kcal, protein, carbs, fat, workouts_per_week, sex, birth_year, height_cm, activity, goal_weight_kg, plan, onboarded')
+        .limit(1)
+      if (res.error?.code === '42703') {
+        // Database not updated yet (no body-stat columns): keep working with the old goals, skip the setup.
+        const old = check(await db.from('user_settings').select('kcal, protein, carbs, fat, workouts_per_week').limit(1)) as Goals[]
+        return { ...DEFAULT_GOALS, ...old[0], onboarded: true }
+      }
+      const rows = check(res) as Goals[]
+      const g = rows[0]
+      return g ? { ...g, goal_weight_kg: g.goal_weight_kg === null ? null : Number(g.goal_weight_kg) } : DEFAULT_GOALS
     },
     async saveGoals(g) {
       const { data } = await db.auth.getSession()

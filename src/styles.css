@@ -51,7 +51,7 @@ main.no-tabbar { padding-bottom: calc(env(safe-area-inset-bottom) + 24px); }
 .demo-banner + main { padding-top: 12px; }
 .screen { display: flex; flex-direction: column; gap: 12px; }
 .screen-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding-top: 6px; }
-.screen-head .sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.screen-head .sub, .sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .detail-title { margin-top: -6px; }
 .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 6px; }
 .section-head h2 { font-size: 18px; }
@@ -153,6 +153,12 @@ label input, label select, label textarea { color: var(--text); }
 .btn-google:not(:disabled):active { background: #f1f3f4; }
 .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 58px; padding: 10px 2px; background: none; border: 0; text-align: left; cursor: pointer; color: var(--text); }
+.choice .grow { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.choice .t { font-size: 16px; font-weight: 600; }
+.choice .d { font-size: 13px; color: var(--muted); }
+.radio { flex: none; width: 22px; height: 22px; border-radius: 11px; border: 2px solid #555; box-sizing: border-box; }
+.radio.on { border: 7px solid var(--accent); }
 .check-row { flex-direction: row; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; color: var(--text); cursor: pointer; }
 .check-row input { width: 22px; height: 22px; min-height: 22px; padding: 0; margin: 0; accent-color: var(--accent); flex: none; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

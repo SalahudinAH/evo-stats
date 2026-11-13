@@ -44,7 +44,7 @@ export function More({ nav }: { nav: Nav }) {
         <Item title="Settings & Shortcuts" sub="Auto check-in, weight sync, sign out" onClick={() => open('settings')} />
       </section>
       {goals && g.data && (
-        <GoalsSheet api={nav.api} goals={g.data} onClose={() => setGoals(false)} onSaved={() => { setGoals(false); g.reload(); nav.notify('Goals saved') }} />
+        <GoalsSheet api={nav.api} goals={g.data} onReplan={() => { setGoals(false); nav.openPlanner() }} onClose={() => setGoals(false)} onSaved={() => { setGoals(false); g.reload(); nav.notify('Goals saved') }} />
       )}
     </div>
   )

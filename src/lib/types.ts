@@ -111,11 +111,27 @@ export interface FoodEntry extends Macros {
 
 export type NewFoodEntry = Omit<FoodEntry, 'id' | 'eaten_at'> & { eaten_at?: string }
 
+export type Sex = 'male' | 'female'
+export type Activity = 'sedentary' | 'light' | 'moderate' | 'active'
+export type PlanId = 'aggressive_cut' | 'cut' | 'mild_cut' | 'maintain' | 'lean_bulk' | 'bulk'
+
+/** Daily targets plus the body stats they were worked out from. */
 export interface Goals extends Macros {
   workouts_per_week: number
+  sex: Sex | null
+  birth_year: number | null
+  height_cm: number | null
+  activity: Activity | null
+  goal_weight_kg: number | null
+  plan: PlanId | null
+  /** The first-sign-in setup has been done (or skipped). */
+  onboarded: boolean
 }
 
-export const DEFAULT_GOALS: Goals = { kcal: 2600, protein: 160, carbs: 300, fat: 80, workouts_per_week: 4 }
+export const DEFAULT_GOALS: Goals = {
+  kcal: 2600, protein: 160, carbs: 300, fat: 80, workouts_per_week: 4,
+  sex: null, birth_year: null, height_cm: null, activity: null, goal_weight_kg: null, plan: null, onboarded: false,
+}
 
 export interface CheckInResult {
   logged: boolean

@@ -142,6 +142,16 @@ create table if not exists public.user_settings (
   workouts_per_week int not null default 4 check (workouts_per_week between 1 and 14)
 );
 
+-- Body stats used to estimate maintenance calories, and the plan picked
+-- at first sign-in. onboarded = the setup screen has been done or skipped.
+alter table public.user_settings add column if not exists sex            text check (sex in ('male', 'female'));
+alter table public.user_settings add column if not exists birth_year     int check (birth_year between 1900 and 2100);
+alter table public.user_settings add column if not exists height_cm      int check (height_cm between 100 and 250);
+alter table public.user_settings add column if not exists activity       text check (activity in ('sedentary', 'light', 'moderate', 'active'));
+alter table public.user_settings add column if not exists goal_weight_kg numeric(5,1) check (goal_weight_kg between 30 and 300);
+alter table public.user_settings add column if not exists plan           text;
+alter table public.user_settings add column if not exists onboarded      boolean not null default false;
+
 -- Secret key your iPhone Shortcuts use to log visits / weight.
 -- Created from the app's Settings tab; never stored in the web app's code.
 create table if not exists public.shortcut_tokens (

@@ -32,7 +32,8 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 **Food**
 - Calories and macros per meal: breakfast, lunch, dinner and snacks
 - Your own food library with serving sizes, plus one-tap adds for the foods you log most
-- Daily goals for calories, protein, carbs and fat
+- Setup on first sign-in: from sex, age, height, weight, goal weight and activity it estimates your maintenance calories (Mifflin–St Jeor), then offers a mild, normal or aggressive cut or a lean bulk or bulk, with the weekly rate and weeks to your goal
+- Daily goals for calories, protein, carbs and fat. Change the calories and the macros scale with them; change a macro and the calories follow
 
 **Progress**
 - Weekly working sets per muscle compared with a target

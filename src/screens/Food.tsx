@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { Nav } from '../App'
 import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
 import { useLoad } from '../lib/hooks'
+import { kcalFromMacros, planLabel, scaleMacros } from '../lib/nutrition'
 import { IconPlus, IconSearch, Sheet } from '../components/ui'
 
 const DAY = 24 * 3600 * 1000
@@ -146,7 +147,7 @@ export function FoodScreen({ nav }: { nav: Nav }) {
           onAdded={name => { setAdding(null); nav.notify(`${name} added`); reload() }} />
       )}
       {editGoals && g && (
-        <GoalsSheet api={nav.api} goals={g} onClose={() => setEditGoals(false)} onSaved={() => { setEditGoals(false); goals.reload(); nav.notify('Goals saved') }} />
+        <GoalsSheet api={nav.api} goals={g} onReplan={() => { setEditGoals(false); nav.openPlanner() }} onClose={() => setEditGoals(false)} onSaved={() => { setEditGoals(false); goals.reload(); nav.notify('Goals saved') }} />
       )}
     </div>
   )
@@ -264,24 +265,51 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded }: {
   )
 }
 
-export function GoalsSheet({ api, goals, onClose, onSaved }: { api: Api; goals: Goals; onClose: () => void; onSaved: () => void }) {
-  const [g, setG] = useState({
-    kcal: String(goals.kcal), protein: String(goals.protein), carbs: String(goals.carbs), fat: String(goals.fat), workouts_per_week: String(goals.workouts_per_week),
-  })
+export function GoalsSheet({ api, goals, onClose, onSaved, onReplan }: {
+  api: Api; goals: Goals; onClose: () => void; onSaved: () => void; onReplan?: () => void
+}) {
+  const [kcal, setKcal] = useState(String(goals.kcal))
+  // The split the user last chose; calorie changes scale from this so rounding never drifts.
+  const [base, setBase] = useState({ protein: goals.protein, carbs: goals.carbs, fat: goals.fat })
+  const [m, setM] = useState({ protein: String(goals.protein), carbs: String(goals.carbs), fat: String(goals.fat) })
+  const [wpw, setWpw] = useState(String(goals.workouts_per_week))
   const n = (s: string) => Math.max(0, Math.round(parseFloat(s.replace(',', '.')) || 0))
-  const fromMacros = n(g.protein) * 4 + n(g.carbs) * 4 + n(g.fat) * 9
+
+  function changeKcal(v: string) {
+    setKcal(v)
+    const k = n(v)
+    if (k < 800) return
+    const scaled = scaleMacros({ kcal: kcalFromMacros(base), ...base }, k)
+    setM({ protein: String(scaled.protein), carbs: String(scaled.carbs), fat: String(scaled.fat) })
+  }
+  function changeMacro(key: 'protein' | 'carbs' | 'fat', v: string) {
+    const next = { ...m, [key]: v }
+    setM(next)
+    const nb = { protein: n(next.protein), carbs: n(next.carbs), fat: n(next.fat) }
+    setBase(nb)
+    setKcal(String(kcalFromMacros(nb)))
+  }
+  const pct = (g: number, per: number) => { const k = n(kcal); return k ? Math.round((g * per * 100) / k) : 0 }
+
   return (
-    <Sheet title="Goals" onClose={onClose}>
-      <label>Calories per day<input inputMode="numeric" value={g.kcal} onChange={e => setG({ ...g, kcal: e.target.value })} /></label>
+    <Sheet title="Daily goals" onClose={onClose}>
+      {goals.plan && (
+        <p className="small muted">Plan: <b style={{ color: 'var(--text)' }}>{planLabel(goals.plan)}</b>{goals.goal_weight_kg ? ` towards ${goals.goal_weight_kg} kg` : ''}</p>
+      )}
+      {onReplan && <button className="btn btn-soft" onClick={onReplan}>Work out my calories</button>}
+      <label>Calories per day<input inputMode="numeric" value={kcal} onChange={e => changeKcal(e.target.value)} /></label>
       <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-        <label>Protein g<input inputMode="numeric" value={g.protein} onChange={e => setG({ ...g, protein: e.target.value })} /></label>
-        <label>Carbs g<input inputMode="numeric" value={g.carbs} onChange={e => setG({ ...g, carbs: e.target.value })} /></label>
-        <label>Fat g<input inputMode="numeric" value={g.fat} onChange={e => setG({ ...g, fat: e.target.value })} /></label>
+        <label>Protein g<input inputMode="numeric" value={m.protein} onChange={e => changeMacro('protein', e.target.value)} /><span className="tiny muted">{pct(n(m.protein), 4)}%</span></label>
+        <label>Carbs g<input inputMode="numeric" value={m.carbs} onChange={e => changeMacro('carbs', e.target.value)} /><span className="tiny muted">{pct(n(m.carbs), 4)}%</span></label>
+        <label>Fat g<input inputMode="numeric" value={m.fat} onChange={e => changeMacro('fat', e.target.value)} /><span className="tiny muted">{pct(n(m.fat), 9)}%</span></label>
       </div>
-      <p className="tiny muted">Your macros add up to {fromMacros.toLocaleString('en-GB')} kcal (protein and carbs 4 kcal/g, fat 9 kcal/g).</p>
-      <label>Workouts per week<input inputMode="numeric" value={g.workouts_per_week} onChange={e => setG({ ...g, workouts_per_week: e.target.value })} /></label>
+      <p className="tiny muted">Change calories and the macros scale with them. Change a macro and the calories follow (protein and carbs 4 kcal/g, fat 9 kcal/g).</p>
+      <label>Workouts per week<input inputMode="numeric" value={wpw} onChange={e => setWpw(e.target.value)} /></label>
       <button className="btn btn-primary" onClick={async () => {
-        await api.saveGoals({ kcal: n(g.kcal) || 2000, protein: n(g.protein), carbs: n(g.carbs), fat: n(g.fat), workouts_per_week: Math.min(14, Math.max(1, n(g.workouts_per_week) || 1)) })
+        await api.saveGoals({
+          ...goals, kcal: n(kcal) || 2000, protein: n(m.protein), carbs: n(m.carbs), fat: n(m.fat),
+          workouts_per_week: Math.min(14, Math.max(1, n(wpw) || 1)),
+        })
         onSaved()
       }}>Save</button>
     </Sheet>

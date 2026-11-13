@@ -133,7 +133,10 @@ export function createDemoApi(): Api {
   }
   eat(0, 8, 'breakfast', foods[0]); eat(0, 8, 'breakfast', foods[1]); eat(0, 12, 'lunch', foods[2]); eat(0, 15, 'snack', foods[3])
 
-  let goals: Goals = { ...DEFAULT_GOALS }
+  let goals: Goals = {
+    ...DEFAULT_GOALS, sex: 'male', birth_year: 2000, height_cm: 180, activity: 'moderate',
+    goal_weight_kg: 83, plan: 'lean_bulk', onboarded: !new URLSearchParams(window.location.search).has('onboarding'),
+  }
   let shortcutKey: string | null = null
   const wait = () => new Promise(r => setTimeout(r, 60))
   const remove = <T extends { id: string }>(list: T[], rid: string) => { const i = list.findIndex(x => x.id === rid); if (i >= 0) list.splice(i, 1) }

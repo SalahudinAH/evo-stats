@@ -12,6 +12,8 @@ import { WorkoutSummary } from './screens/WorkoutSummary'
 import { FoodScreen } from './screens/Food'
 import { Progress } from './screens/Progress'
 import { More } from './screens/More'
+import { PlanSetup } from './screens/Plan'
+import { useLoad } from './lib/hooks'
 import { Login, NewPassword, NotConfigured } from './screens/Login'
 
 export type Tab = 'today' | 'train' | 'food' | 'progress' | 'more'
@@ -75,6 +77,10 @@ export interface Nav {
   /** Start a workout (replaces nothing if one is already running). */
   startWorkout: (d: Draft) => void
   openWorkout: () => void
+  /** Open the calorie planner (body stats → maintenance → plan). */
+  openPlanner: () => void
+  /** Bumps when goals change, so screens showing them reload. */
+  goalsVersion: number
 }
 
 function Shell({ api, owner }: { api: Api; owner: string }) {
@@ -82,6 +88,10 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
   const [toast, setToast] = useState<string | null>(null)
   const [draft, setDraftState] = useState<Draft | null>(() => loadDraft(owner))
   const [workoutOpen, setWorkoutOpen] = useState(false)
+  const [planning, setPlanning] = useState(false)
+  const [goalsVersion, setGoalsVersion] = useState(0)
+  const goals = useLoad(() => api.getGoals(), [api, goalsVersion])
+  const weights = useLoad(() => api.listWeights(), [api, goalsVersion])
   const timer = useRef<number>()
 
   const notify = useCallback((m: string) => {
@@ -120,9 +130,16 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
       scrollToTop()
     },
     openWorkout: () => { setWorkoutOpen(true); scrollToTop() },
+    openPlanner: () => { setPlanning(true); scrollToTop() },
+    goalsVersion,
   }
+  // First sign-in: ask for body stats before anything else.
+  const needsSetup = !!goals.data && !goals.data.onboarded
+  const showPlanner = (planning || needsSetup) && !!goals.data && !!weights.data
+  const latestWeight = weights.data?.length ? weights.data[weights.data.length - 1].kg : null
+  const closePlanner = () => { setPlanning(false); setGoalsVersion(v => v + 1); scrollToTop() }
 
-  const inWorkout = workoutOpen && draft
+  const inWorkout = workoutOpen && draft && !showPlanner
   const endWorkout = (savedTab: Tab | null) => {
     setDraft(null)
     setWorkoutOpen(false)
@@ -132,7 +149,15 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
   return (
     <div className="app">
       {api.mode === 'demo' && <div className="demo-banner">Demo data · nothing is saved</div>}
-      <main className={inWorkout ? 'no-tabbar' : undefined}>
+      <main className={inWorkout || showPlanner ? 'no-tabbar' : undefined}>
+        {showPlanner && (
+          <PlanSetup api={api} goals={goals.data!} latestWeight={latestWeight} firstTime={needsSetup}
+            onDone={() => { closePlanner(); notify('Daily goals set') }}
+            onSkip={async () => {
+              if (needsSetup) await api.saveGoals({ ...goals.data!, onboarded: true }).catch(() => undefined)
+              closePlanner()
+            }} />
+        )}
         {inWorkout && !draft.finished_at && (
           <ActiveWorkout nav={nav} draft={draft} setDraft={setDraft}
             onMinimise={() => setWorkoutOpen(false)}
@@ -143,14 +168,14 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
             onSaved={() => { endWorkout('train'); notify('Workout saved') }}
             onDiscard={() => { endWorkout(null); notify('Workout discarded') }} />
         )}
-        {!inWorkout && tab === 'today' && <Today nav={nav} />}
-        {!inWorkout && tab === 'train' && <Train nav={nav} />}
-        {!inWorkout && tab === 'food' && <FoodScreen nav={nav} />}
-        {!inWorkout && tab === 'progress' && <Progress nav={nav} />}
-        {!inWorkout && tab === 'more' && <More nav={nav} />}
+        {!inWorkout && !showPlanner && tab === 'today' && <Today nav={nav} />}
+        {!inWorkout && !showPlanner && tab === 'train' && <Train nav={nav} />}
+        {!inWorkout && !showPlanner && tab === 'food' && <FoodScreen nav={nav} />}
+        {!inWorkout && !showPlanner && tab === 'progress' && <Progress nav={nav} />}
+        {!inWorkout && !showPlanner && tab === 'more' && <More nav={nav} />}
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}
-      {!inWorkout && (
+      {!inWorkout && !showPlanner && (
         <nav className="tabbar" aria-label="Sections">
           <TabBtn active={tab === 'today'} onClick={() => go('today')} label="Today" icon={<IconHome />} />
           <TabBtn active={tab === 'train'} onClick={() => go('train')} label="Train" icon={<IconDumbbell />} />
