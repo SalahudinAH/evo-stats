@@ -39,7 +39,7 @@ export function More({ nav }: { nav: Nav }) {
     <div className="screen">
       <LargeTitle title="More" />
       <Section title="Gym">
-        <Row icon={<MapPin size={18} strokeWidth={2} />} title="Clubs" sub="Your EVO clubs and when you usually train" onClick={() => open('clubs')} chevron />
+        <Row icon={<MapPin size={18} strokeWidth={2} />} title="EVO centres" sub="All 92 in Norway, nearest first, and how busy they are" onClick={() => open('clubs')} chevron />
         <Row icon={<CalendarCheck size={18} strokeWidth={2} />} title="Visit history" sub="Every check-in, and delete mistakes" onClick={() => open('visits')} chevron />
       </Section>
       <Section title="You">

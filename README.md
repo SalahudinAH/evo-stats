@@ -43,6 +43,11 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 - What to work on: lagging muscles and lifts that have stalled
 - Estimated 1-rep max trend for your main lifts, body weight, and visits per week
 
+**EVO centres**
+- All 92 EVO centres in Norway, nearest first when location is on, with search
+- One tap to the centre in Google Maps, where Google shows live busyness and popular times, plus directions and your own usual training hours there
+- Save a centre as your club for automatic check-ins
+
 **Automatic check-ins**
 - iPhone Shortcuts log a visit when you arrive at the gym or tap an NFC sticker
 - A daily Shortcut syncs your weight from Apple Health
@@ -113,6 +118,7 @@ Personal project. Not affiliated with or endorsed by EVO Fitness.
 
 ## Credits
 
+- EVO centre list and coordinates: [evofitness.no](https://evofitness.no/sentre/)
 - Exercise names and photos: [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas, public domain (The Unlicense)
 - Food data: [Open Food Facts](https://world.openfoodfacts.org), under the Open Database License
 - Body map: [react-muscle-highlighter](https://github.com/soroojshehryar/react-muscle-highlighter), MIT
