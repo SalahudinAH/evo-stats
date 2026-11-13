@@ -231,12 +231,11 @@ export function ExercisePicker({ api, exercises, exclude = [], onPick, onPickMan
       </div>
 
       {mine.length > 0 && (
-        <Section title="Your exercises" className="thumbs">
+        <Section title="Your exercises">
           {mine.map(e => {
             const on = selected.includes(`own:${e.id}`)
             return (
               <button key={e.id} type="button" className="group-row" aria-pressed={multi ? on : undefined} onClick={() => tap(`own:${e.id}`)} disabled={busy}>
-                <ExerciseThumb image={e.image} />
                 <span className="row-text"><span className="row-title">{e.name}</span><span className="row-sub">{e.muscle ? MUSCLE_LABEL[e.muscle] : 'Muscle not set'}</span></span>
                 {mark(on)}
               </button>
@@ -245,7 +244,7 @@ export function ExercisePicker({ api, exercises, exclude = [], onPick, onPickMan
         </Section>
       )}
 
-      <Section title="Exercise library" className="thumbs">
+      <Section title="Exercise library">
         {!library && !libError && <div className="group-block muted small">Loading…</div>}
         {libError && <div className="group-block muted small">The library couldn't load. Check your connection; you can still create your own below.</div>}
         {library && !lib.length && <div className="group-block muted small">No matches in the library.</div>}
@@ -254,7 +253,6 @@ export function ExercisePicker({ api, exercises, exclude = [], onPick, onPickMan
           const on = selected.includes(key)
           return (
             <button key={key} type="button" className="group-row" aria-pressed={multi ? on : undefined} onClick={() => tap(key)} disabled={busy}>
-              <ExerciseThumb image={x.image} />
               <span className="row-text"><span className="row-title">{x.name}</span><span className="row-sub">{MUSCLE_LABEL[x.muscle]}{x.equipment ? ` · ${cap(x.equipment)}` : ''}</span></span>
               {mark(on)}
             </button>
