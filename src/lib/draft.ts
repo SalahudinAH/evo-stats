@@ -77,11 +77,14 @@ export function draftExercise(
   const last = sessions[sessions.length - 1]
   const tip = suggest(target, sessions)
   const count = target?.target_sets ?? Math.max(last?.sets.length ?? 0, 3)
-  const weight = tip?.weight != null ? fmtKg(tip.weight) : ''
+  // Start from exactly what you did last time; the tip's "Use" button applies a suggested weight.
+  const lastWorking = last?.sets.filter(s => !s.is_warmup) ?? []
+  const fallbackW = tip?.weight != null ? fmtKg(tip.weight) : ''
   const sets: DraftSet[] = []
   for (let i = 0; i < count; i++) {
-    const p = last?.sets[i]
-    sets.push(draftSet(p ? { w: p.weight_kg, r: p.reps } : null, weight))
+    const p = lastWorking[i] ?? lastWorking[lastWorking.length - 1]
+    const s = draftSet(p ? { w: p.weight_kg, r: p.reps } : null, p ? fmtKg(p.weight_kg) : fallbackW)
+    sets.push({ ...s, reps: p ? String(p.reps) : target ? String(target.rep_max) : '' })
   }
   return { key: newKey(), exercise_id, target, tip, sets }
 }

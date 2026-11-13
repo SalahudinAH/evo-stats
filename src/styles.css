@@ -549,3 +549,41 @@ html.ios-short .rest-pill { bottom: 16px; }
 .busy-lbl { font-size: 10px; color: var(--muted); white-space: nowrap; }
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .grid3 .btn { padding-left: 6px; padding-right: 6px; }
+
+/* Live workout: one set at a time */
+.wk-card { background: var(--surface); border-radius: 20px; padding: 18px 16px 14px; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; scroll-margin-top: 90px; }
+.wk-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.wk-head h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.wk-last { font-size: 15px; color: var(--muted); margin: 0; }
+.wk-last b { color: var(--text); font-weight: 600; }
+.wk-tip { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); font-size: 15px; font-weight: 600; }
+.wk-tip svg { flex: none; color: var(--accent-text); }
+.wk-tip.up { background: rgba(76, 210, 139, 0.12); } .wk-tip.up svg { color: var(--up); }
+.wk-tip.warn { background: var(--warn-soft); } .wk-tip.warn svg { color: var(--warn); }
+.wk-tip span { flex: 1; min-width: 0; }
+.wk-tip button { border: 0; background: none; color: var(--accent-text); font-weight: 700; font-size: 16px; cursor: pointer; padding: 4px 2px; }
+.wk-tip.up button { color: var(--up); }
+.wk-sets { display: flex; flex-direction: column; gap: 4px; }
+.wk-set { appearance: none; border: 0; background: none; color: var(--muted); font: inherit; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 14px; padding: 8px 4px; cursor: pointer; text-align: left; }
+.wk-set .num { width: 36px; height: 36px; border-radius: 18px; background: var(--surface-2); display: grid; place-items: center; font-size: 15px; color: var(--muted); flex: none; }
+.wk-set.done { color: var(--text); }
+.wk-set.done .num { background: var(--up); color: #0b2316; }
+.wk-active { border: 1.5px solid rgba(215, 0, 90, 0.45); background: rgba(215, 0, 90, 0.06); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 12px; margin: 4px 0; }
+.wk-active-head { display: flex; align-items: center; gap: 12px; font-size: 16px; }
+.num.ring { width: 40px; height: 40px; border-radius: 20px; border: 2px solid var(--accent-text); background: none; color: var(--accent-text); font-size: 17px; font-weight: 700; cursor: pointer; flex: none; }
+.num.ring.warm { border-color: var(--warn); color: var(--warn); }
+.wk-stepper { display: grid; grid-template-columns: 52px 52px 1fr 52px; gap: 10px; align-items: center; }
+.wk-stepper .lbl { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+.wk-stepper button { height: 52px; border-radius: 14px; border: 0; background: var(--surface-2); color: var(--text); display: grid; place-items: center; cursor: pointer; }
+.wk-stepper button:active { background: var(--surface-3); }
+.wk-stepper input { height: 52px; min-height: 52px; border-radius: 14px; border: 0; background: #0b0b0b; text-align: center; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 0; }
+.wk-log { height: 56px; border: 0; border-radius: 16px; background: var(--accent); color: #fff; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.wk-log:active { background: var(--accent-strong); }
+.wk-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 2px; }
+.wk-foot button { border: 0; background: none; color: var(--accent-text); font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; padding: 6px 0; }
+.wk-foot button.quiet { color: var(--muted); }
+.wk-list { margin-top: 12px; }
+.wk-dot { width: 26px; height: 26px; border-radius: 13px; border: 2px solid #48484a; flex: none; display: grid; place-items: center; }
+.wk-dot.part { border-color: var(--accent-text); }
+.wk-dot.on { border-color: var(--up); background: var(--up); color: #0b2316; }
+.wk-head .circle-btn { background: var(--surface-2); color: var(--muted); flex: none; }
