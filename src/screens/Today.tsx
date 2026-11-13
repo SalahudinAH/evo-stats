@@ -4,7 +4,10 @@ import { useLoad, useNow, useTraining } from '../lib/hooks'
 import { countSince, startOfWeek, weekStreak } from '../lib/stats'
 import { buildDraft } from '../lib/draft'
 import { findPRs, nextRoutine, previousWorkout, volume, workingSets } from '../lib/training'
-import { Check, ChevronRight, Dumbbell, Flame, MapPin, Play } from 'lucide-react'
+import { Check, ChevronRight, Dumbbell, Flame, MapPin, Play, Star, Users } from 'lucide-react'
+import { CENTRES, googleMapsUrl } from '../lib/evoCentres'
+import { distanceMeters, hourlyPattern } from '../lib/stats'
+import { openMoreSub } from './More'
 import { fmtClock, fmtDuration, LargeTitle, Ring, Row, Section, Spark } from '../components/ui'
 import { dayRange, sumMacros } from './Food'
 
@@ -22,6 +25,17 @@ export function Today({ nav }: { nav: Nav }) {
 
   const list = visits.data ?? []
   const favorite = clubs.data?.find(c => c.is_favorite) ?? clubs.data?.[0] ?? null
+  const mainCentre = favorite ? CENTRES.find(c => distanceMeters(favorite.lat, favorite.lng, c.lat, c.lng) < 250) ?? null : null
+  const busyUrl = mainCentre ? googleMapsUrl(mainCentre)
+    : favorite ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(favorite.name)}` : null
+  const usualHours = (() => {
+    if (!favorite) return null
+    const p = hourlyPattern(visits.data ?? [], favorite.name)
+    if (!p.some(v => v > 0)) return null
+    const top = p.indexOf(1)
+    return `You usually train here around ${String(top).padStart(2, '0')}:00`
+  })()
+  const openCentres = () => { openMoreSub('clubs'); nav.go('more') }
   const lastVisit = list[0]
   const checkedIn = lastVisit && now - new Date(lastVisit.visited_at).getTime() < 3 * 3600 * 1000
   const streak = weekStreak(list)
@@ -99,11 +113,18 @@ export function Today({ nav }: { nav: Nav }) {
         </div>
       </button>
 
-      <Section title="Gym" className="icons">
+      <Section title="Gym" className="icons" action={<button className="btn-text" onClick={openCentres}>Centres</button>}>
         <Row icon={<MapPin size={17} strokeWidth={2} />}
           title={checkedIn ? `At ${lastVisit.club_name ?? 'the gym'} · ${new Date(lastVisit.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : 'Not checked in'}
-          sub={checkedIn ? (lastVisit.source === 'manual' ? 'Checked in by you' : 'Checked in automatically') : (favorite?.name ?? 'Shortcuts check you in on arrival')}
+          sub={checkedIn ? (lastVisit.source === 'manual' ? 'Checked in by you' : 'Checked in automatically') : 'Shortcuts check you in on arrival'}
           trail={checkedIn ? undefined : <button className="pill-btn" onClick={checkIn} disabled={busy}>{busy ? '…' : 'Check in'}</button>} />
+        {favorite ? (
+          <Row icon={<Star size={17} strokeWidth={2} fill="currentColor" />} title={favorite.name}
+            sub={usualHours ? `Main centre · ${usualHours.replace('You usually', 'usually')}` : 'Main centre'}
+            trail={busyUrl ? <a className="pill-btn" href={busyUrl} target="_blank" rel="noreferrer"><Users size={14} strokeWidth={2.4} />How busy?</a> : undefined} />
+        ) : clubs.data && (
+          <Row icon={<Star size={17} strokeWidth={2} />} title="Choose your main centre" sub="See how busy it is from here" chevron onClick={openCentres} />
+        )}
         <div className="group-block" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
           {([[30, 'last 30 days'], [182, '6 months'], [365, '12 months']] as const).map(([d, l]) => (
             <div key={d} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

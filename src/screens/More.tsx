@@ -13,12 +13,16 @@ import { GoalsSheet } from './Food'
 
 type Sub = 'clubs' | 'visits' | 'weight' | 'settings' | null
 
+/** Lets another tab open a More sub-screen, e.g. Today → Centres. Read once on the next mount. */
+let startSub: Sub = null
+export function openMoreSub(s: Exclude<Sub, null>) { startSub = s }
+
 const SOURCE_LABEL: Record<Visit['source'], string> = {
   arrival: 'Arrived', nfc: 'NFC tap', wallet: 'Door tap', shortcut: 'Shortcut', manual: 'Manual',
 }
 
 export function More({ nav }: { nav: Nav }) {
-  const [sub, setSub] = useState<Sub>(null)
+  const [sub, setSub] = useState<Sub>(() => { const s = startSub; startSub = null; return s })
   const [goals, setGoals] = useState(false)
   const g = useLoad(() => nav.api.getGoals(), [nav.api])
   const open = (s: Sub) => { setSub(s); scrollToTop() }

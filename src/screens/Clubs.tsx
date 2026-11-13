@@ -45,6 +45,13 @@ export function Clubs({ api, notify }: { api: Api; notify: (m: string) => void }
     notify(`EVO ${c.name} saved`)
     clubs.reload()
   }
+  async function makeMain(c: Centre) {
+    const s = savedFor(c)
+    if (s) await api.setFavorite(s.id)
+    else await api.addClub(`EVO ${c.name}`, c.lat, c.lng, true)
+    notify(`EVO ${c.name} is your main centre`)
+    clubs.reload()
+  }
   async function remove(s: Club) {
     if (!confirm(`Remove ${s.name} from your clubs?`)) return
     await api.deleteClub(s.id)
@@ -76,7 +83,7 @@ export function Clubs({ api, notify }: { api: Api; notify: (m: string) => void }
             const d = dist(s.lat, s.lng)
             return (
               <Row key={s.id} icon={<Star size={18} strokeWidth={2} fill={s.is_favorite ? 'currentColor' : 'none'} />}
-                title={s.name} sub={[d !== null ? fmtDist(d) : null, s.is_favorite ? 'Favourite' : null].filter(Boolean).join(' · ') || 'Saved'}
+                title={s.name} sub={[d !== null ? fmtDist(d) : null, s.is_favorite ? 'Main centre' : null].filter(Boolean).join(' · ') || 'Saved'}
                 chevron onClick={centre ? () => setOpen(centre) : () => remove(s)} />
             )
           })}
@@ -121,14 +128,12 @@ export function Clubs({ api, notify }: { api: Api; notify: (m: string) => void }
               <a className="btn" href={centreUrl(open)} target="_blank" rel="noreferrer"><ExternalLink size={17} strokeWidth={2.2} />EVO page</a>
             </div>
 
-            {!s && <button className="btn" onClick={async () => { await save(open); setOpen(null) }}><Star size={17} strokeWidth={2.2} />Save as my club</button>}
-            {s && !s.is_favorite && (
-              <button className="btn" onClick={async () => { await api.setFavorite(s.id); clubs.reload(); notify(`${s.name} is your favourite`) }}>
-                <Star size={17} strokeWidth={2.2} />Make favourite
-              </button>
-            )}
+            {s?.is_favorite
+              ? <p className="small" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-text)', fontWeight: 600 }}><Star size={16} strokeWidth={2.2} fill="currentColor" />Your main centre · shown on Today</p>
+              : <button className="btn" onClick={async () => { await makeMain(open); setOpen(null) }}><Star size={17} strokeWidth={2.2} />Set as main centre</button>}
+            {!s && <button className="btn" onClick={async () => { await save(open); setOpen(null) }}><MapPin size={17} strokeWidth={2.2} />Save as one of my clubs</button>}
             {s && <button className="btn btn-danger-quiet" onClick={async () => { await remove(s); setOpen(null) }}><Trash2 size={17} strokeWidth={2.2} />Remove from my clubs</button>}
-            <p className="tiny muted">Saved clubs are used for automatic check-ins.</p>
+            <p className="tiny muted">Your main centre shows on Today. Saved clubs are used for automatic check-ins.</p>
           </Sheet>
         )
       })()}
