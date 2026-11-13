@@ -49,7 +49,7 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 - Save a centre as your club for automatic check-ins
 
 **Automatic check-ins**
-- iPhone Shortcuts log a visit when you arrive at the gym or tap an NFC sticker
+- An iPhone Shortcuts location automation (a geofence around your centre) logs a visit when you arrive
 - A daily Shortcut syncs your weight from Apple Health
 - Visits within 3 hours count once, so several triggers never double-count
 

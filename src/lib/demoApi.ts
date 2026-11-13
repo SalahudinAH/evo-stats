@@ -94,7 +94,7 @@ export function createDemoApi(): Api {
     const t = new Date(now - d * day)
     if (![1, 3, 5].includes(t.getDay()) || d % 5 === 0) continue
     t.setHours(17 + (d % 3), (d * 7) % 60, 0, 0)
-    visits.push({ id: id(), visited_at: t.toISOString(), source: (['arrival', 'nfc', 'manual'] as const)[d % 3], club_name: 'EVO Home club' })
+    visits.push({ id: id(), visited_at: t.toISOString(), source: (['arrival', 'arrival', 'manual'] as const)[d % 3], club_name: 'EVO Home club' })
   }
   for (const w of workouts) {
     visits.push({ id: id(), visited_at: new Date(new Date(w.started_at).getTime() - 5 * 60000).toISOString(), source: 'arrival', club_name: 'EVO Home club' })

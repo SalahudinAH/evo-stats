@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { CENTRES } from '../lib/evoCentres'
+import { distanceMeters } from '../lib/stats'
 import type { Api } from '../lib/types'
 import { useLoad } from '../lib/hooks'
 import { SUPABASE_KEY, SUPABASE_URL, supabase } from '../lib/supabaseApi'
@@ -40,7 +42,9 @@ export function Settings({ api, notify }: { api: Api; notify: (m: string) => voi
   const pubKey = api.mode === 'demo' ? 'sb_publishable_…' : SUPABASE_KEY
   // The real key is only shown (masked) above, never in the examples below.
   const token = key.data ? 'YOUR-SHORTCUT-KEY' : 'CREATE-A-KEY-FIRST'
-  const club = clubs.data?.find(c => c.is_favorite)?.name ?? 'EVO Home club'
+  const fav = clubs.data?.find(c => c.is_favorite) ?? null
+  const club = fav?.name ?? 'EVO Home club'
+  const mainCentre = fav ? CENTRES.find(c => distanceMeters(fav.lat, fav.lng, c.lat, c.lng) < 250) ?? null : null
   const [email, setEmail] = useState<string | null>(null)
   useEffect(() => {
     if (api.mode === 'demo') return
@@ -76,30 +80,22 @@ export function Settings({ api, notify }: { api: Api; notify: (m: string) => voi
       </section>
 
       <section className="card guide">
-        <h2>3. Auto check-in when you arrive</h2>
+        <h2>3. Auto check-in by location</h2>
+        <p className="muted small">Your iPhone watches an area around the gym (a geofence) and checks you in the moment you walk in. It runs in the background through Location Services, so you don't need to open the app.</p>
         <ol>
           <li>Open <b>Shortcuts</b> › <b>Automation</b> › <b>+</b> › <b>Arrive</b>.</li>
-          <li>Location: search your EVO's address. Time: <b>Any time</b>. Choose <b>Run Immediately</b>.</li>
+          <li>Location: search {mainCentre ? <b>{mainCentre.address}</b> : <>your EVO's address</>}, then drag the circle down to about <b>100 m</b> so it only fires at the door. Time: <b>Any time</b>. Choose <b>Run Immediately</b>.</li>
           <li>New blank automation › add <b>Get Contents of URL</b>. URL: <i>log a visit</i>.</li>
           <li>Tap <b>Show More</b>: Method <b>POST</b>; Headers: <code>apikey</code> = your apikey; Request Body: <b>JSON</b> with three <b>Text</b> fields:</li>
         </ol>
         <pre>{`p_token   ${token}
 p_source  arrival
 p_club    ${club}`}</pre>
-        <p className="muted small">Make one automation per club you use. Visits within 3 hours count once, so overlapping triggers are fine.</p>
+        <p className="muted small">Location Services must be on for Shortcuts (Settings › Privacy &amp; Security › Location Services). Make one automation per centre you use. Visits within 3 hours count once, so passing by twice never double-counts.</p>
       </section>
 
       <section className="card guide">
-        <h2>4. Tap an NFC sticker (optional)</h2>
-        <ol>
-          <li><b>Automation</b> › <b>+</b> › <b>NFC</b> › <b>Scan</b> your sticker and name it.</li>
-          <li><b>Run Immediately</b>, then the same <b>Get Contents of URL</b> as above, with <code>p_source</code> = <code>nfc</code>.</li>
-        </ol>
-        <p className="muted small">Also try <b>Automation › + › Transaction</b>. If your EVO pass appears in the card list, use it with <code>p_source</code> = <code>wallet</code> to count every door tap. It usually only lists payment cards.</p>
-      </section>
-
-      <section className="card guide">
-        <h2>5. Sync weight from Apple Health daily</h2>
+        <h2>4. Sync weight from Apple Health daily</h2>
         <ol>
           <li><b>Automation</b> › <b>+</b> › <b>Time of Day</b> (e.g. 09:00, Daily) › <b>Run Immediately</b>.</li>
           <li>Add <b>Find Health Samples</b>: Type <b>Weight</b>, Sort by <b>Start Date</b>, <b>Latest First</b>, Limit <b>1</b>.</li>

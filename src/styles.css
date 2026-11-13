@@ -45,7 +45,7 @@ code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 1
 .num { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.02em; }
 
 /* Pinned to the screen edges: on a home-screen iPhone app, 100vh/100dvh can come out shorter than the screen and leave a strip under the tab bar. */
-.app { position: fixed; inset: 0; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; }
+.app { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; }
 main { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain;
   padding: calc(env(safe-area-inset-top) + 12px) 16px 24px; }
 main.no-tabbar { padding-bottom: calc(env(safe-area-inset-bottom) + 24px); }
@@ -321,7 +321,7 @@ main.no-tabbar .bottom-bar { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .menu-item .grow { flex: 1; display: flex; flex-direction: column; gap: 1px; }
 
 /* ---- Sheet (picker / forms) ---- */
-.sheet-backdrop { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.55); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s ease-out; }
+.sheet-backdrop { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); z-index: 30; background: rgba(0, 0, 0, 0.55); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s ease-out; }
 .sheet { width: min(560px, 100%); max-height: 88dvh; overflow: auto; background: var(--bg); border-radius: 22px 22px 0 0; border: 1px solid var(--line); padding: 10px 16px calc(env(safe-area-inset-bottom) + 18px); display: flex; flex-direction: column; gap: 12px; animation: up 0.2s ease-out; }
 .sheet-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--surface-3); align-self: center; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
