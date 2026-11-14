@@ -36,9 +36,8 @@ export function burned(activity: DailyActivity | null, workouts: Workout[], kg: 
 }
 
 /**
- * Your goal already includes an activity level (e.g. "Active" ≈ 1.55 × resting burn). When burned
- * calories are added each day, that part would be counted twice, so the base becomes what you'd
- * need sitting still ("Mostly sitting"), and the day's steps and workouts are added on top.
+ * Your goal already includes an activity level (e.g. "Moderate" ≈ 1.55 × resting burn). That much
+ * movement is already paid for, so only what you burn beyond it is added to the day.
  */
 export function activityAllowance(g: Goals, kg: number): number {
   if (!g.sex || !g.birth_year || !g.height_cm || !g.activity || g.activity === 'sedentary') return 0
@@ -51,7 +50,10 @@ export interface Budget {
   goal: Goals | null
   on: boolean
   base: number | null
+  /** Movement already counted in your goal by its activity level. */
   allowance: number
+  /** Burned calories beyond that, added to today's goal. */
+  extra: number
   burn: Burned | null
   activity: DailyActivity | null
   reload: () => void
@@ -69,7 +71,7 @@ export function syncSteps() {
 
 const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-/** The day's calorie budget: your goal, or (when switched on) a sitting-still base plus what you burned. */
+/** The day's calorie budget: your goal, plus (when switched on) what you burned beyond your activity level. */
 export function useBudget(api: Api, goals: Goals | null, from: Date, to: Date): Budget {
   const [state, setState] = useState<{ on: boolean; activity: DailyActivity | null; workouts: Workout[]; kg: number | null }>({ on: false, activity: null, workouts: [], kg: null })
   const [version, setVersion] = useState(0)
@@ -110,13 +112,16 @@ export function useBudget(api: Api, goals: Goals | null, from: Date, to: Date): 
 
   const kg = state.kg ?? 75
   const burn = state.activity || state.workouts.length ? burned(state.activity, state.workouts, kg) : null
-  if (!goals) return { goal: null, on: state.on, base: null, allowance: 0, burn, activity: state.activity, reload: () => setVersion(v => v + 1) }
-  if (!state.on) return { goal: goals, on: false, base: goals.kcal, allowance: 0, burn, activity: state.activity, reload: () => setVersion(v => v + 1) }
+  if (!goals) return { goal: null, on: state.on, base: null, allowance: 0, extra: 0, burn, activity: state.activity, reload: () => setVersion(v => v + 1) }
+  if (!state.on) return { goal: goals, on: false, base: goals.kcal, allowance: 0, extra: 0, burn, activity: state.activity, reload: () => setVersion(v => v + 1) }
+  // Your goal already counts the movement your activity level assumes (`allowance`). Only what you
+  // burn beyond that is added, so the goal never drops below what you set, and nothing counts twice.
   const allowance = activityAllowance(goals, kg)
-  const base = goals.kcal - allowance
-  const kcal = Math.round(base + (burn?.total ?? 0))
-  // Protein and fat stay as set; the extra (or missing) calories go to carbs, the fuel for training.
-  const carbs = Math.max(0, Math.round(goals.carbs + (kcal - goals.kcal) / 4))
-  return { goal: { ...goals, carbs, kcal }, on: true, base, allowance, burn, activity: state.activity, reload: () => setVersion(v => v + 1) }
+  const base = goals.kcal
+  const extra = Math.max(0, Math.round((burn?.total ?? 0) - allowance))
+  const kcal = goals.kcal + extra
+  // Protein and fat stay as set; the extra calories go to carbs, the fuel for training.
+  const carbs = Math.round(goals.carbs + extra / 4)
+  return { goal: { ...goals, carbs, kcal }, on: true, base, allowance, extra, burn, activity: state.activity, reload: () => setVersion(v => v + 1) }
 }
 

@@ -206,7 +206,9 @@ export function FoodScreen({ nav }: { nav: Nav }) {
                 : budget.burn.fromHealth !== null
                 ? <>Active energy <b>{budget.burn.fromHealth} kcal</b> · {budget.burn.steps.toLocaleString('en-GB')} steps</>
                 : <>{budget.burn.steps.toLocaleString('en-GB')} steps{budget.burn.workoutMinutes ? ` · ${budget.burn.workoutMinutes} min training` : ''} ≈ <b>{budget.burn.total} kcal</b></>}
-              {budget.burn && budget.on && budget.base !== null && <span className="muted"> · goal {Math.round(budget.base).toLocaleString('en-GB')} + {budget.burn.total} burned</span>}
+              {budget.burn && budget.on && <span className="muted">{budget.extra > 0
+                ? ` · +${budget.extra} added to your goal`
+                : ` · adds to your goal after ${budget.allowance.toLocaleString('en-GB')} kcal (already in it)`}</span>}
             </span>
             {!budget.on && <button className="link-btn" onClick={async () => {
               try { await nav.api.setAddBurned(true); budget.reload(); nav.notify('Burned calories are added to your goal') }
@@ -588,7 +590,7 @@ export function GoalsSheet({ api, goals, onClose, onSaved, onReplan }: {
       <label className="check-row">
         <input type="checkbox" checked={addBurned} onChange={e => setAddBurned(e.target.checked)} />
         <span>Add calories burned to the day
-          <span className="tiny muted" style={{ display: 'block', marginTop: 2 }}>Steps from Apple Health and your workouts are added on top. The activity already in your goal is taken out, so nothing counts twice.</span>
+          <span className="tiny muted" style={{ display: 'block', marginTop: 2 }}>When steps and workouts burn more than your activity level already counts, the extra is added to the day as carbs. Your goal never goes below what you set here.</span>
         </span>
       </label>
       {err && <p className="error">{err}</p>}
