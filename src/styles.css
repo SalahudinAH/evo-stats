@@ -246,15 +246,6 @@ label input, label select, label textarea { color: var(--text); }
 .check { appearance: none; border: 0; width: 46px; height: 40px; border-radius: 10px; background: var(--surface-2); color: #7d7d7d; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .check.on { background: var(--up); color: #0b2a1e; }
 
-.rest { position: fixed; left: 50%; transform: translateX(-50%); width: min(560px, 100%) ; bottom: 0; z-index: 12; padding: 0 12px calc(env(safe-area-inset-bottom) + 12px); }
-.rest-inner { background: var(--surface-3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); }
-.rest-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.rest .time { font-family: var(--font-display); font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.rest .btns { display: flex; gap: 6px; }
-.rest .btns .btn { min-width: 50px; padding: 0 10px; background: #4a4a4a; border-color: transparent; }
-.rest .btns .btn-primary { background: var(--accent); }
-.rest .progress { height: 4px; background: #4a4a4a; }
-.rest .progress > div { background: var(--accent-text); transition: none; }
 
 .cmp { display: grid; grid-template-columns: 52px minmax(0, 1fr); row-gap: 4px; font-size: 13px; }
 .cmp .l { color: var(--muted); }
@@ -591,6 +582,6 @@ html.ios-short .rest-pill { bottom: 16px; }
 /* Weekly rotation */
 .plan-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 12px; }
 .plan-week span { text-align: center; font-size: 12px; font-weight: 600; padding: 9px 2px; border-radius: 10px; background: var(--surface-2); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plan-week span.rest { background: none; color: var(--muted); font-weight: 500; border: 1px dashed #3a3a3c; }
+.plan-week span.pw-rest { background: none; color: var(--muted); font-weight: 500; border: 1px dashed #3a3a3c; }
 .plan-week span.next { background: var(--accent); color: #fff; }
 .rest-note { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 14px; color: var(--text-2); padding: 14px 16px 0; }

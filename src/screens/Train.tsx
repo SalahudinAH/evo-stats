@@ -231,8 +231,8 @@ function TrainHome({ nav, data, goal, open, reload }: {
         <Section title={`Your week · ${up.week.filter(Boolean).length} workouts`}>
           <div className="plan-week" aria-label="Your weekly rotation">
             {up.week.map((id, i) => {
-              const name = id ? data.routines.find(r => r.id === id)?.name ?? '?' : 'Rest'
-              return <span key={i} className={`${id ? '' : 'rest'} ${i === up.index ? 'next' : ''}`} aria-current={i === up.index ? 'step' : undefined}>{name}</span>
+              const name = id ? (data.routines.find(r => r.id === id)?.name ?? '?').replace(/ day$/i, '') : 'Rest'
+              return <span key={i} className={`${id ? '' : 'pw-rest'} ${i === up.index ? 'next' : ''}`} aria-current={i === up.index ? 'step' : undefined}>{name}</span>
             })}
           </div>
         </Section>
