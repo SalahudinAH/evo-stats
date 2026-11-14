@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Check, ChevronRight, Dumbbell, Plus } from 'lucide-react'
 import { MUSCLES, type Api, type Exercise, type Muscle } from '../lib/types'
 import { guessMuscle, MUSCLE_LABEL, type Badge as BadgeT } from '../lib/training'
@@ -397,6 +397,93 @@ export function Row({ icon, iconTone = 'accent', thumb, title, sub, trail, chevr
   return onClick
     ? <button type="button" className="group-row" onClick={onClick} aria-label={ariaLabel}>{body}</button>
     : <div className="group-row">{body}</div>
+}
+
+/** Only one row is swiped open at a time; opening another closes this one. */
+let closeOpenSwipe: (() => void) | null = null
+
+/**
+ * iOS-style swipe to delete: swipe left to show a red Delete button, or swipe all the way to delete
+ * straight away. Vertical scrolling still works (the browser keeps pan-y), and a tap on an open row
+ * closes it instead of opening it.
+ */
+export function SwipeRow({ children, onDelete, label = 'Delete' }: { children: ReactNode; onDelete: () => void; label?: string }) {
+  const BUTTON = 84
+  const ref = useRef<HTMLDivElement>(null)
+  const [x, setXState] = useState(0)
+  const [animate, setAnimate] = useState(false)
+  const xRef = useRef(0)
+  const gesture = useRef<{ sx: number; sy: number; base: number; axis: 'x' | 'y' | null; id: number } | null>(null)
+  const swallow = useRef(false)
+  const setX = (v: number, anim: boolean) => { xRef.current = v; setAnimate(anim); setXState(v) }
+  const close = useRef(() => setX(0, true)).current
+  useEffect(() => () => { if (closeOpenSwipe === close) closeOpenSwipe = null }, [close])
+
+  const remove = () => {
+    const w = ref.current?.offsetWidth ?? 400
+    setX(-w, true)
+    if (closeOpenSwipe === close) closeOpenSwipe = null
+    window.setTimeout(onDelete, 180)
+  }
+
+  const down = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    if (closeOpenSwipe && closeOpenSwipe !== close) { closeOpenSwipe(); closeOpenSwipe = null }
+    gesture.current = { sx: e.clientX, sy: e.clientY, base: xRef.current, axis: null, id: e.pointerId }
+  }
+  const move = (e: React.PointerEvent) => {
+    const g = gesture.current
+    if (!g || g.id !== e.pointerId) return
+    const dx = e.clientX - g.sx, dy = e.clientY - g.sy
+    if (!g.axis) {
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        g.axis = 'x'
+        try { ref.current?.setPointerCapture(e.pointerId) } catch { /* not supported */ }
+      } else if (Math.abs(dy) > 8) g.axis = 'y'
+    }
+    if (g.axis !== 'x') return
+    const w = ref.current?.offsetWidth ?? 400
+    let next = Math.min(0, g.base + dx)
+    if (next > 0) next = 0
+    if (next < -w) next = -w
+    setX(next, false)
+  }
+  const up = (e: React.PointerEvent) => {
+    const g = gesture.current
+    gesture.current = null
+    if (!g || g.id !== e.pointerId || g.axis !== 'x') return
+    swallow.current = true
+    const w = ref.current?.offsetWidth ?? 400
+    if (xRef.current < -w * 0.55) remove()
+    else if (xRef.current < -BUTTON / 2) { setX(-BUTTON, true); closeOpenSwipe = close }
+    else setX(0, true)
+  }
+  const cancel = () => {
+    const g = gesture.current
+    gesture.current = null
+    if (g?.axis === 'x') setX(xRef.current < -BUTTON / 2 ? -BUTTON : 0, true)
+  }
+  const click = (e: React.MouseEvent) => {
+    if (swallow.current || xRef.current !== 0) {
+      e.stopPropagation(); e.preventDefault()
+      if (!swallow.current) close()
+      swallow.current = false
+    }
+  }
+
+  const open = x < 0
+  return (
+    <div ref={ref} className="swipe" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}>
+      {open && (
+        <div className="swipe-under" aria-hidden={x === 0}>
+          <button type="button" className="swipe-del" style={{ width: Math.max(BUTTON, -x) }} onClick={remove}>{label}</button>
+        </div>
+      )}
+      <div className={`swipe-top ${animate ? 'anim' : ''}`} style={{ transform: x ? `translateX(${x}px)` : undefined }} onClickCapture={click}>
+        {children}
+      </div>
+    </div>
+  )
 }
 
 /** Exercise photos come from free-exercise-db (public domain), pinned to one commit. */

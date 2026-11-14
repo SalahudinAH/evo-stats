@@ -362,6 +362,8 @@ main.no-tabbar .bottom-bar { padding-bottom: calc(env(safe-area-inset-bottom) + 
   font-size: 14px; font-weight: 650; max-width: calc(100% - 32px); text-align: center;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); animation: rise 0.18s ease-out;
 }
+.toast.has-action { display: flex; align-items: center; gap: 14px; text-align: left; }
+.toast-action { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 750; cursor: pointer; padding: 2px 0; }
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } }
 
 .demo-banner { flex: none; z-index: 5; text-align: center; font-size: 12px; font-weight: 650; padding: calc(env(safe-area-inset-top) + 4px) 8px 4px; background: var(--accent-soft); color: var(--accent-text); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
@@ -596,6 +598,13 @@ html.ios-short .rest-pill { bottom: 16px; }
 .drag-item { position: relative; }
 .drag-item + .drag-item::before, .drag-item + .group-row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--line); z-index: 1; }
 .drag-item.dragging { opacity: 0.35; }
+
+/* Swipe left to delete */
+.swipe { position: relative; overflow: hidden; touch-action: pan-y; }
+.swipe-top { position: relative; background: var(--surface); }
+.swipe-top.anim { transition: transform 0.2s ease-out; }
+.swipe-under { position: absolute; inset: 0; display: flex; justify-content: flex-end; background: #ff3b30; }
+.swipe-del { border: 0; background: #ff3b30; color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; padding: 0 16px; display: flex; align-items: center; justify-content: center; }
 .meal-drop { display: flex; flex-direction: column; gap: 12px; border-radius: 16px; }
 .meal-drop.drop-target .group { box-shadow: 0 0 0 2px var(--accent-text); }
 .drag-ghost { position: fixed; z-index: 70; transform: translate(-50%, -130%); pointer-events: none; display: flex; align-items: center; gap: 6px; max-width: 70vw; padding: 10px 14px; border-radius: 14px; background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 15px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

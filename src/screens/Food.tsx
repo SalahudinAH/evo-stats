@@ -4,7 +4,7 @@ import type { Nav } from '../App'
 import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
 import { useLoad } from '../lib/hooks'
 import { kcalFromMacros, planLabel, scaleMacros } from '../lib/nutrition'
-import { IconSearch, LargeTitle, Row, Section, Sheet } from '../components/ui'
+import { IconSearch, LargeTitle, Row, Section, Sheet, SwipeRow } from '../components/ui'
 import { BarcodeScanner } from '../components/Scanner'
 import { lookupBarcode, searchProducts, TooManySearches, type ScannedProduct } from '../lib/openFoodFacts'
 import { syncSteps, useBudget } from '../lib/burn'
@@ -74,7 +74,27 @@ export function FoodScreen({ nav }: { nav: Nav }) {
   const [moved, setMoved] = useState<Record<string, Meal>>({})
   const dragging = useRef(false)
   const suppressClick = useRef(false)
-  const shown = list.map(e => (moved[e.id] ? { ...e, meal: moved[e.id] } : e))
+  const [removed, setRemoved] = useState<Set<string>>(new Set())
+  const shown = list.filter(e => !removed.has(e.id)).map(e => (moved[e.id] ? { ...e, meal: moved[e.id] } : e))
+
+  async function deleteEntry(e: FoodEntry) {
+    setRemoved(r => new Set(r).add(e.id))
+    try {
+      await nav.api.deleteFoodEntry(e.id)
+      reload()
+      nav.notify(`${e.name} deleted`, {
+        label: 'Undo',
+        run: async () => {
+          const { id: _id, ...rest } = e
+          try { await nav.api.addFoodEntry(rest); reload() }
+          catch { nav.notify('Could not undo. Add it again from Your usuals.') }
+        },
+      })
+    } catch {
+      setRemoved(r => { const n = new Set(r); n.delete(e.id); return n })
+      nav.notify('Could not delete it. Try again.')
+    }
+  }
 
   // While dragging, stop the page from scrolling under your finger (needs a non-passive listener).
   useEffect(() => {
@@ -217,9 +237,11 @@ export function FoodScreen({ nav }: { nav: Nav }) {
               {items.map(e => (
                 <div key={e.id} className={`drag-item ${drag?.id === e.id ? 'dragging' : ''}`} onPointerDown={ev => startDrag(ev, e)}
                   onContextMenu={ev => ev.preventDefault()}>
-                  <Row title={e.name} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return } setEntryMenu(e) }}
-                    sub={`${e.serving ? `${e.serving} · ` : ''}P ${round1(e.protein)} · C ${round1(e.carbs)} · F ${round1(e.fat)}`}
-                    trail={<span style={{ fontSize: 17 }}>{Math.round(e.kcal)}</span>} />
+                  <SwipeRow onDelete={() => deleteEntry(e)}>
+                    <Row title={e.name} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return } setEntryMenu(e) }}
+                      sub={`${e.serving ? `${e.serving} · ` : ''}P ${round1(e.protein)} · C ${round1(e.carbs)} · F ${round1(e.fat)}`}
+                      trail={<span style={{ fontSize: 17 }}>{Math.round(e.kcal)}</span>} />
+                  </SwipeRow>
                 </div>
               ))}
               {!items.length && (
@@ -231,7 +253,7 @@ export function FoodScreen({ nav }: { nav: Nav }) {
           </div>
         )
       })}
-      {list.length > 1 && <p className="tiny muted" style={{ padding: '0 16px', marginTop: -4 }}>Press and hold a food to drag it to another meal.</p>}
+      {list.length > 0 && <p className="tiny muted" style={{ padding: '0 16px', marginTop: -4 }}>Swipe left to delete.{list.length > 1 ? ' Press and hold to drag to another meal.' : ''}</p>}
 
       {drag && (
         <div className="drag-ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
@@ -261,11 +283,7 @@ export function FoodScreen({ nav }: { nav: Nav }) {
           <div className="seg seg-sm" role="group" aria-label="Move to meal">
             {MEALS.map(m => <button key={m} aria-pressed={(moved[entryMenu.id] ?? entryMenu.meal) === m} onClick={() => { moveEntry(entryMenu, m); setEntryMenu(null) }}>{MEAL_LABEL[m]}</button>)}
           </div>
-          <button className="btn btn-danger-quiet" onClick={async () => {
-            await nav.api.deleteFoodEntry(entryMenu.id)
-            setEntryMenu(null)
-            reload()
-          }}><Trash2 size={18} strokeWidth={2} />Delete</button>
+          <button className="btn btn-danger-quiet" onClick={() => { const e = entryMenu; setEntryMenu(null); deleteEntry(e) }}><Trash2 size={18} strokeWidth={2} />Delete</button>
         </Sheet>
       )}
       {editGoals && goals.data && (

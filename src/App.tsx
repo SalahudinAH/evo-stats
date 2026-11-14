@@ -72,7 +72,8 @@ function readTab(): Tab {
 /** What every screen gets. */
 export interface Nav {
   api: Api
-  notify: (m: string) => void
+  /** A short message above the tab bar, optionally with a button such as Undo. */
+  notify: (m: string, action?: { label: string; run: () => void }) => void
   go: (t: Tab) => void
   draft: Draft | null
   /** Start a workout (replaces nothing if one is already running). */
@@ -88,7 +89,7 @@ export interface Nav {
 
 function Shell({ api, owner }: { api: Api; owner: string }) {
   const [tab, setTab] = useState<Tab>(readTab)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ m: string; action?: { label: string; run: () => void } } | null>(null)
   const [draft, setDraftState] = useState<Draft | null>(() => loadDraft(owner))
   const [workoutOpen, setWorkoutOpen] = useState(false)
   const [planning, setPlanning] = useState(false)
@@ -97,10 +98,10 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
   const weights = useLoad(() => api.listWeights(), [api, goalsVersion])
   const timer = useRef<number>()
 
-  const notify = useCallback((m: string) => {
-    setToast(m)
+  const notify = useCallback((m: string, action?: { label: string; run: () => void }) => {
+    setToast({ m, action })
     window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => setToast(null), 2600)
+    timer.current = window.setTimeout(() => setToast(null), action ? 5000 : 2600)
   }, [])
 
   useEffect(() => {
@@ -178,7 +179,12 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
         {!inWorkout && !showPlanner && tab === 'progress' && <Progress nav={nav} />}
         {!inWorkout && !showPlanner && tab === 'more' && <More nav={nav} />}
       </main>
-      {toast && <div className="toast" role="status">{toast}</div>}
+      {toast && (
+        <div className={`toast ${toast.action ? 'has-action' : ''}`} role="status">
+          <span>{toast.m}</span>
+          {toast.action && <button className="toast-action" onClick={() => { const a = toast.action; setToast(null); a?.run() }}>{toast.action.label}</button>}
+        </div>
+      )}
       {!inWorkout && !showPlanner && (
         <nav className="tabbar" aria-label="Sections">
           <TabBtn active={tab === 'today'} onClick={() => go('today')} label="Today" icon={<IconHome />} />
