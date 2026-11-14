@@ -463,7 +463,7 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onSc
   }
 
   return (
-    <Sheet title={`Add to ${MEAL_LABEL[meal].toLowerCase()}`} onClose={onClose}>
+    <Sheet title={`Add to ${MEAL_LABEL[meal].toLowerCase()}`} onClose={onClose} tall>
       <div className="seg seg-sm" role="group" aria-label="Meal">
         {MEALS.map(m => <button key={m} aria-pressed={meal === m} onClick={() => setMeal(m)}>{MEAL_LABEL[m]}</button>)}
       </div>

@@ -48,7 +48,8 @@ export function Badge({ b, className = '' }: { b: BadgeT; className?: string }) 
 }
 
 /** Bottom sheet. Closes on backdrop tap and Escape. */
-export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+/** A bottom sheet. `tall` keeps a fixed height, for search sheets whose results shrink while you type. */
+export function Sheet({ title, onClose, children, tall }: { title: string; onClose: () => void; children: ReactNode; tall?: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -59,7 +60,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   // Rendered into <body> so it always sits above the tab bar, whatever scroll container opened it.
   return createPortal(
     <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()}>
+      <div className={`sheet ${tall ? 'tall' : ''}`} role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()}>
         <div className="sheet-grab" />
         <div className="sheet-head">
           <h2>{title}</h2>
@@ -222,7 +223,7 @@ export function ExercisePicker({ api, exercises, exclude = [], onPick, onPickMan
     : <span className="pick" aria-hidden="true"><Plus size={16} strokeWidth={2.4} /></span>
 
   return (
-    <Sheet title="Add exercise" onClose={onClose}>
+    <Sheet title="Add exercise" onClose={onClose} tall>
       <label className="searchbar">
         <IconSearch />
         <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search 750+ exercises" aria-label="Search exercises" />

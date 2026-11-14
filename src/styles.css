@@ -314,6 +314,7 @@ main.no-tabbar .bottom-bar { padding-bottom: calc(env(safe-area-inset-bottom) + 
 /* ---- Sheet (picker / forms) ---- */
 .sheet-backdrop { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.55); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s ease-out; }
 .sheet { width: min(560px, 100%); max-height: 88dvh; overflow: auto; background: var(--bg); border-radius: 22px 22px 0 0; border: 1px solid var(--line); padding: 10px 16px calc(env(safe-area-inset-bottom) + 18px); display: flex; flex-direction: column; gap: 12px; animation: up 0.2s ease-out; }
+.sheet.tall { height: 88dvh; }
 .sheet-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--surface-3); align-self: center; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 @keyframes fade { from { opacity: 0; } }
