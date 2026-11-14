@@ -115,7 +115,7 @@ p_measured_at  [Formatted Date]   (Text)`}</pre>
         <h2>5. Sync steps from Apple Health</h2>
         <p className="muted small">Sends today's steps (and Active Energy if you wear an Apple Watch) so Food can add the calories you burned. Turn it on under Food › Calorie &amp; macro goals.</p>
         <ol>
-          <li><b>Automation</b> › <b>+</b> › <b>Time of Day</b>, Daily, <b>Run Immediately</b>. Make a few: e.g. 12:00, 17:00, 21:00 and 23:30. Each run replaces the day's numbers.</li>
+          <li>In <b>Shortcuts</b>, make a new shortcut named <b>EVO steps</b> (exactly; the Sync button on Food runs it by that name).</li>
           <li>Add <b>Find Health Samples</b>: Type <b>Steps</b>, Start Date <b>is today</b>.</li>
           <li>Add <b>Calculate Statistics</b> › <b>Sum</b> of the Health Samples.</li>
           <li>Optional, with an Apple Watch: another <b>Find Health Samples</b> for <b>Active Energy</b>, today, and its <b>Sum</b>.</li>
@@ -124,6 +124,7 @@ p_measured_at  [Formatted Date]   (Text)`}</pre>
         <pre>{`p_token        ${token}        (Text)
 p_steps        [Sum of steps]          (Number)
 p_active_kcal  [Sum of active energy]  (Number, optional)`}</pre>
+        <p className="muted small">Then make it run by itself: <b>Automation</b> › <b>+</b> › <b>Time of Day</b>, Daily, <b>Run Immediately</b>, action <b>Run Shortcut › EVO steps</b>. Make a few, e.g. every two hours and 23:30; <b>Arrive</b>/<b>Leave</b> home, <b>Charger</b> and <b>Apple Watch Workout</b> ends work too. Each run replaces the day's numbers. iOS can't send steps the moment they change, so for an up-to-the-minute number, tap <b>Sync</b> on Food.</p>
         <p className="muted small">How it's counted: about 0.5 kcal per kg of body weight per km walked (roughly 0.38 kcal per 1,000 steps per kg), plus about 4 kcal per kg per hour of strength training from your logged workouts. With Active Energy from an Apple Watch, that's used instead.</p>
       </section>
 

@@ -57,6 +57,16 @@ export interface Budget {
   reload: () => void
 }
 
+/** The iOS Shortcut that sends today's steps. The Sync button runs it by this name. */
+export const STEPS_SHORTCUT = 'EVO steps'
+let syncStarted = 0
+
+/** Opens Shortcuts and runs the steps shortcut. When you come back, the hook below fetches the new numbers. */
+export function syncSteps() {
+  syncStarted = Date.now()
+  window.location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(STEPS_SHORTCUT)}`
+}
+
 const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 /** The day's calorie budget: your goal, or (when switched on) a sitting-still base plus what you burned. */
@@ -80,6 +90,23 @@ export function useBudget(api: Api, goals: Goals | null, from: Date, to: Date): 
     return () => { live = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, day, version])
+
+  // Coming back to the app (e.g. from the Sync shortcut, or after an automation ran): fetch again.
+  // Right after a sync, check once more a few seconds later in case the shortcut was still sending.
+  useEffect(() => {
+    let timer: number | undefined
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      setVersion(v => v + 1)
+      if (Date.now() - syncStarted < 120_000) {
+        syncStarted = 0
+        window.clearTimeout(timer)
+        timer = window.setTimeout(() => setVersion(v => v + 1), 3000)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { document.removeEventListener('visibilitychange', onVisible); window.clearTimeout(timer) }
+  }, [])
 
   const kg = state.kg ?? 75
   const burn = state.activity || state.workouts.length ? burned(state.activity, state.workouts, kg) : null

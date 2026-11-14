@@ -607,5 +607,7 @@ html.ios-short .rest-pill { bottom: 16px; }
 .burn-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); border-top: 0.5px solid var(--line); padding-top: 12px; }
 .burn-row svg { flex: none; color: var(--up); }
 .burn-row b { color: var(--text); font-weight: 650; }
+.sync-btn { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border: 0.5px solid var(--line); border-radius: 15px; background: var(--surface-2); color: var(--accent-text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.burn-row .sync-btn svg { color: inherit; }
 .check-row { flex-direction: row !important; align-items: flex-start; gap: 12px; color: var(--text); font-size: 15px; }
 .check-row input { width: 22px; min-height: 22px; height: 22px; margin-top: 2px; flex: none; }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Footprints, GripVertical, Minus, Pencil, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Footprints, GripVertical, Minus, Pencil, Plus, RefreshCw, ScanBarcode, Search, Trash2 } from 'lucide-react'
 import type { Nav } from '../App'
 import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
 import { useLoad } from '../lib/hooks'
@@ -7,7 +7,7 @@ import { kcalFromMacros, planLabel, scaleMacros } from '../lib/nutrition'
 import { IconSearch, LargeTitle, Row, Section, Sheet } from '../components/ui'
 import { BarcodeScanner } from '../components/Scanner'
 import { lookupBarcode, searchProducts, TooManySearches, type ScannedProduct } from '../lib/openFoodFacts'
-import { useBudget } from '../lib/burn'
+import { syncSteps, useBudget } from '../lib/burn'
 
 const DAY = 24 * 3600 * 1000
 const MEAL_LABEL: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' }
@@ -177,19 +177,22 @@ export function FoodScreen({ nav }: { nav: Nav }) {
           <div><span className="k">Carbs</span><span className="v">{Math.round(total.carbs)}<span> / {g?.carbs ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.carbs, g?.carbs), background: 'var(--carbs)' }} /></span></div>
           <div><span className="k">Fat</span><span className="v">{Math.round(total.fat)}<span> / {g?.fat ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.fat, g?.fat), background: 'var(--fat)' }} /></span></div>
         </div>
-        {budget.burn && (
+        {(budget.burn || (budget.on && offset === 0)) && (
           <div className="burn-row">
             <Footprints size={16} strokeWidth={2.2} />
             <span style={{ flex: 1, minWidth: 0 }}>
-              {budget.burn.fromHealth !== null
+              {!budget.burn
+                ? <>No steps synced yet today</>
+                : budget.burn.fromHealth !== null
                 ? <>Active energy <b>{budget.burn.fromHealth} kcal</b> · {budget.burn.steps.toLocaleString('en-GB')} steps</>
                 : <>{budget.burn.steps.toLocaleString('en-GB')} steps{budget.burn.workoutMinutes ? ` · ${budget.burn.workoutMinutes} min training` : ''} ≈ <b>{budget.burn.total} kcal</b></>}
-              {budget.on && budget.base !== null && <span className="muted"> · goal {Math.round(budget.base).toLocaleString('en-GB')} + {budget.burn.total} burned</span>}
+              {budget.burn && budget.on && budget.base !== null && <span className="muted"> · goal {Math.round(budget.base).toLocaleString('en-GB')} + {budget.burn.total} burned</span>}
             </span>
             {!budget.on && <button className="link-btn" onClick={async () => {
               try { await nav.api.setAddBurned(true); budget.reload(); nav.notify('Burned calories are added to your goal') }
               catch (e) { nav.notify(e instanceof Error ? e.message : 'Could not change the setting') }
             }}>Add to goal</button>}
+            {offset === 0 && <button className="sync-btn" aria-label="Sync steps from Apple Health" onClick={syncSteps}><RefreshCw size={14} strokeWidth={2.4} />Sync</button>}
           </div>
         )}
       </section>
