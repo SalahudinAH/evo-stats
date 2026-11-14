@@ -57,6 +57,26 @@ export function Sheet({ title, onClose, children, tall }: { title: string; onClo
     document.body.style.overflow = 'hidden'
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
   }, [onClose])
+  // On iPhone the keyboard covers the bottom of the screen instead of shrinking it, so a bottom sheet
+  // would sit behind it. Track the visible area and lift the sheet above the keyboard.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const root = document.documentElement.style
+    const update = () => {
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      root.setProperty('--kb', `${Math.round(kb)}px`)
+      root.setProperty('--vvh', `${Math.round(vv.height)}px`)
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      root.removeProperty('--kb'); root.removeProperty('--vvh')
+    }
+  }, [])
   // Rendered into <body> so it always sits above the tab bar, whatever scroll container opened it.
   return createPortal(
     <div className="sheet-backdrop" onClick={onClose}>
