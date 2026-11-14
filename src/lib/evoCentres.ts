@@ -105,3 +105,27 @@ export const centreUrl = (c: Centre) => `https://evofitness.no/senter/${c.slug}/
 /** Opens the centre in Google Maps (the app on iPhone if it's installed), where Google shows how busy it is. */
 export const googleMapsUrl = (c: Centre) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`EVO ${c.name}, ${c.address}`)}`
 export const appleMapsUrl = (c: Centre) => `https://maps.apple.com/?q=${encodeURIComponent(`EVO ${c.name}`)}&ll=${c.lat},${c.lng}`
+
+/**
+ * Opening hours, from each centre's page on evofitness.no (November 2026): almost all are open
+ * 05–24 every day of the year. Exceptions are listed here. Holiday hours (like Drøbak at
+ * Christmas) aren't included.
+ */
+const HOURS: Record<string, [number, number]> = { drobak: [6, 23], frogner: [7, 23] }
+export const centreHours = (c: Centre): [number, number] => HOURS[c.slug] ?? [5, 24]
+
+export interface OpenStatus { open: boolean; soon: boolean; text: string }
+const hh = (h: number) => (h % 24 === 0 ? 'midnight' : `${String(h).padStart(2, '0')}:00`)
+
+/** Open or closed right now (Norwegian time on the phone), and when that changes. */
+export function openStatus(c: Centre, now = new Date()): OpenStatus {
+  const [from, to] = centreHours(c)
+  const mins = now.getHours() * 60 + now.getMinutes()
+  const open = mins >= from * 60 && mins < to * 60
+  if (open) {
+    const left = to * 60 - mins
+    return { open, soon: left <= 60, text: left <= 60 ? `Closes in ${left} min` : `Open until ${hh(to)}` }
+  }
+  const until = (mins < from * 60 ? from * 60 : from * 60 + 1440) - mins
+  return { open, soon: until <= 60, text: until <= 60 ? `Closed · opens in ${until} min` : `Closed · opens ${hh(from)}` }
+}

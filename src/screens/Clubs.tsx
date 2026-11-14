@@ -6,7 +6,7 @@ import { distanceMeters, hourlyPattern } from '../lib/stats'
 import { HourStrip } from '../components/Charts'
 import { Row, Section, Sheet } from '../components/ui'
 import { LiveBusy, useBusyness } from '../components/LiveBusy'
-import { appleMapsUrl, CENTRES, centreUrl, googleMapsUrl, type Centre } from '../lib/evoCentres'
+import { appleMapsUrl, CENTRES, centreHours, centreUrl, googleMapsUrl, openStatus, type Centre } from '../lib/evoCentres'
 
 const NEAR_M = 250
 const fmtDist = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : m < 10_000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m / 1000)} km`)
@@ -111,6 +111,12 @@ export function Clubs({ api, notify }: { api: Api; notify: (m: string) => void }
         return (
           <Sheet title={`EVO ${open.name}`} onClose={() => setOpen(null)}>
             <p className="small muted" style={{ marginTop: -6 }}>{open.address}{d !== null ? ` · ${fmtDist(d)} away` : ''}</p>
+            {(() => { const h = openStatus(open); const [f, t] = centreHours(open); return (
+              <p className="small" style={{ marginTop: -8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ color: !h.open ? 'var(--warn)' : h.soon ? '#e5c07b' : 'var(--up)', fontWeight: 600 }}>{h.text}</span>
+                <span className="muted">· Every day {String(f).padStart(2, '0')}–{t}</span>
+              </p>
+            ) })()}
 
             <CentreBusy api={api} centre={open} />
 
