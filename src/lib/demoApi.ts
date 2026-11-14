@@ -133,6 +133,8 @@ export function createDemoApi(): Api {
   }
   eat(0, 8, 'breakfast', foods[0]); eat(0, 8, 'breakfast', foods[1]); eat(0, 12, 'lunch', foods[2]); eat(0, 15, 'snack', foods[3])
 
+  // Push, Pull, Legs, rest, Push, Pull, rest.
+  let schedule: (string | null)[] | null = [routines[0].id, routines[1].id, routines[2].id, null, routines[0].id, routines[1].id, null]
   let goals: Goals = {
     ...DEFAULT_GOALS, sex: 'male', birth_year: 2000, height_cm: 180, activity: 'moderate',
     goal_weight_kg: 83, plan: 'lean_bulk', onboarded: !new URLSearchParams(window.location.search).has('onboarding'),
@@ -226,6 +228,8 @@ export function createDemoApi(): Api {
     async addFoodEntry(e) { entries.push({ ...e, id: id(), eaten_at: e.eaten_at ?? new Date().toISOString() }) },
     async deleteFoodEntry(eid) { remove(entries, eid) },
 
+    async getSchedule() { await wait(); return schedule ? [...schedule] : null },
+    async setSchedule(sc) { schedule = sc ? [...sc] : null },
     async getGoals() { return { ...goals } },
     async saveGoals(g) { goals = { ...g } },
 

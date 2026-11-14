@@ -53,11 +53,12 @@ export function useGeolocation() {
 /** Everything the training screens need, loaded together. */
 export function useTraining(api: Api) {
   return useLoad(async () => {
-    const [exercises, sets, routines, items, workouts] = await Promise.all([
+    const [exercises, sets, routines, items, workouts, schedule] = await Promise.all([
       api.listExercises(), api.listSets(), api.listRoutines(), api.listRoutineExercises(), api.listWorkouts(),
+      api.getSchedule().catch(() => null),
     ])
     return {
-      exercises, sets, routines, items, workouts,
+      exercises, sets, routines, items, workouts, schedule,
       sessions: sessionsByExercise(sets),
       exById: new Map(exercises.map(e => [e.id, e])),
     }

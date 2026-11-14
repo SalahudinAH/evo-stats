@@ -69,6 +69,8 @@ export interface RoutineExercise {
   rep_max: number
 }
 
+export type Schedule = (string | null)[]
+
 export type RoutineItem = Pick<RoutineExercise, 'exercise_id' | 'target_sets' | 'rep_min' | 'rep_max'>
 
 export interface Workout {
@@ -177,6 +179,9 @@ export interface Api {
   deleteRoutine(id: string): Promise<void>
   /** Replaces the routine's exercise list (order = array order). */
   setRoutineExercises(routineId: string, items: RoutineItem[]): Promise<void>
+  /** The weekly rotation: routine ids in order, null = rest day. Null when you haven't set one. */
+  getSchedule(): Promise<Schedule | null>
+  setSchedule(s: Schedule | null): Promise<void>
 
   listWorkouts(): Promise<Workout[]>
   saveWorkout(w: NewWorkout): Promise<string>

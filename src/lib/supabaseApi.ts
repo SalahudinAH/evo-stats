@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { BusynessNotSetUp, DEFAULT_GOALS } from './types'
 import type {
   Busyness,
+  Schedule,
   Api, CheckInResult, Club, Exercise, Food, FoodEntry, Goals, Routine, RoutineExercise, Visit, Weight, Workout, WorkoutSet,
 } from './types'
 
@@ -176,6 +177,18 @@ export function createSupabaseApi(): Api {
       if (items.length) {
         check(await db.from('routine_exercises').insert(items.map((it, i) => ({ ...it, routine_id: routineId, position: i }))))
       }
+    },
+
+    async getSchedule() {
+      const res = await db.from('user_settings').select('schedule').limit(1)
+      if (res.error?.code === '42703') return null // database not updated yet
+      const rows = check(res) as { schedule: Schedule | null }[]
+      return rows[0]?.schedule ?? null
+    },
+    async setSchedule(schedule) {
+      const { data } = await db.auth.getSession()
+      if (!data.session) throw new Error('Not signed in')
+      check(await db.from('user_settings').upsert({ user_id: data.session.user.id, schedule }))
     },
 
     async listWorkouts() {

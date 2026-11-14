@@ -157,6 +157,8 @@ alter table public.user_settings add column if not exists activity       text ch
 alter table public.user_settings add column if not exists goal_weight_kg numeric(5,1) check (goal_weight_kg between 30 and 300);
 alter table public.user_settings add column if not exists plan           text;
 alter table public.user_settings add column if not exists onboarded      boolean not null default false;
+-- Weekly rotation: routine ids in order, null = rest day, e.g. Push, Pull, Legs, rest, Push, Pull, rest.
+alter table public.user_settings add column if not exists schedule       jsonb;
 
 -- Secret key your iPhone Shortcuts use to log visits / weight.
 -- Created from the app's Settings tab; never stored in the web app's code.

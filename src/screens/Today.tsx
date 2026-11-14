@@ -3,7 +3,7 @@ import type { Nav } from '../App'
 import { useLoad, useNow, useTraining } from '../lib/hooks'
 import { countSince, startOfWeek, weekStreak } from '../lib/stats'
 import { buildDraft } from '../lib/draft'
-import { findPRs, nextRoutine, previousWorkout, volume, workingSets } from '../lib/training'
+import { findPRs, planNext, previousWorkout, volume, workingSets } from '../lib/training'
 import { Check, ChevronRight, Dumbbell, Flame, MapPin, Play, Star, Users } from 'lucide-react'
 import { CENTRES, googleMapsUrl } from '../lib/evoCentres'
 import { distanceMeters, hourlyPattern } from '../lib/stats'
@@ -53,7 +53,8 @@ export function Today({ nav }: { nav: Nav }) {
   })()
 
   const todaysWorkout = t.data ? [...t.data.workouts].reverse().find(x => new Date(x.started_at).toDateString() === new Date(now).toDateString()) : null
-  const next = t.data ? nextRoutine(t.data.routines, t.data.workouts) : null
+  const up = t.data ? planNext(t.data.routines, t.data.workouts, t.data.schedule) : null
+  const next = up?.routine ?? null
 
   async function checkIn() {
     setBusy(true)
@@ -155,8 +156,8 @@ export function Today({ nav }: { nav: Nav }) {
           )
         })()}
         {t.data && !todaysWorkout && !nav.draft && next && (
-          <Row icon={<Dumbbell size={17} strokeWidth={2} />} title={`Up next: ${next.name}`}
-            sub={`${t.data.items.filter(i => i.routine_id === next.id).length} exercises`}
+          <Row icon={<Dumbbell size={17} strokeWidth={2} />} title={up?.restToday ? 'Rest day' : `Up next: ${next.name}`}
+            sub={up?.restToday ? `Your plan says rest today · next: ${next.name}` : `${t.data.items.filter(i => i.routine_id === next.id).length} exercises`}
             trail={<button className="circle-btn" aria-label={`Start ${next.name}`} onClick={() => nav.startWorkout(buildDraft(next, t.data!.items, t.data!.sessions))}><Play size={14} fill="currentColor" strokeWidth={0} /></button>} />
         )}
       </Section>

@@ -587,3 +587,10 @@ html.ios-short .rest-pill { bottom: 16px; }
 .wk-dot.part { border-color: var(--accent-text); }
 .wk-dot.on { border-color: var(--up); background: var(--up); color: #0b2316; }
 .wk-head .circle-btn { background: var(--surface-2); color: var(--muted); flex: none; }
+
+/* Weekly rotation */
+.plan-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 12px; }
+.plan-week span { text-align: center; font-size: 12px; font-weight: 600; padding: 9px 2px; border-radius: 10px; background: var(--surface-2); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-week span.rest { background: none; color: var(--muted); font-weight: 500; border: 1px dashed #3a3a3c; }
+.plan-week span.next { background: var(--accent); color: #fff; }
+.rest-note { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 14px; color: var(--text-2); padding: 14px 16px 0; }

@@ -6,10 +6,10 @@ import { useLoad, useNow, useTraining, type TrainingData } from '../lib/hooks'
 import { buildDraft } from '../lib/draft'
 import { e1rm, startOfWeek } from '../lib/stats'
 import {
-  bestE1rm, fmtKg, insights, MUSCLE_LABEL, nextRoutine, setsText, suggest, volume, workingSets,
+  bestE1rm, fmtKg, insights, MUSCLE_LABEL, planNext, setsText, suggest, volume, workingSets,
 } from '../lib/training'
 import { LineChart } from '../components/Charts'
-import { Calendar, Check, ChevronLeft, Clock, Dumbbell, History, ListChecks, Play, Plus, Target, TrendingUp, TriangleAlert } from 'lucide-react'
+import { Calendar, Check, ChevronLeft, Clock, Dumbbell, History, ListChecks, Moon, Play, Plus, Target, TrendingUp, TriangleAlert } from 'lucide-react'
 import {
   ExercisePicker, ExerciseThumb, fmtClock, fmtDay, fmtDuration, IconDots, IconDown, IconPlay, IconUp, LargeTitle, MuscleSelect, Row, Section, Sheet,
 } from '../components/ui'
@@ -111,7 +111,8 @@ function TrainHome({ nav, data, goal, open, reload }: {
   const now = useNow(30000)
   const weekStart = startOfWeek(new Date(now))
   const thisWeek = data.workouts.filter(w => new Date(w.started_at) >= weekStart)
-  const next = nextRoutine(data.routines, data.workouts)
+  const up = planNext(data.routines, data.workouts, data.schedule)
+  const next = up?.routine ?? null
   const tips = useMemo(() => insights(data.sets, data.exercises), [data])
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -181,8 +182,10 @@ function TrainHome({ nav, data, goal, open, reload }: {
         })
         return (
           <>
-            <div className="section-title"><h2>Up next</h2><button onClick={() => open({ kind: 'routine', id: next.id })}>View</button></div>
+            <div className="section-title"><h2>{up?.restToday ? 'Rest day today' : up?.doneToday ? 'Next time' : 'Up next'}</h2><button onClick={() => open({ kind: 'routine', id: next.id })}>View</button></div>
             <section className="hero-v2" aria-label={`Up next: ${next.name}`}>
+              {up?.restToday && <p className="rest-note"><Moon size={15} strokeWidth={2.2} />Your plan has a rest day today. {next.name} is next, or train anyway if you feel fresh.</p>}
+              {up?.doneToday && <p className="rest-note"><Check size={15} strokeWidth={2.6} />You've trained today. This is next in your plan.</p>}
               <div className="top">
                 <span className="name">{next.name}</span>
                 {st.muscles.length > 0 && <span className="muted" style={{ fontSize: 15 }}>{st.muscles.map(m => MUSCLE_LABEL[m]).join(' · ')}</span>}
@@ -219,9 +222,20 @@ function TrainHome({ nav, data, goal, open, reload }: {
         <section className="card" style={{ marginTop: 8 }}>
           <h2>Build your plan</h2>
           <p className="muted small">A plan is a few routines you rotate through, like Push / Pull / Legs. Each routine lists exercises with a target such as 4 × 6–8. When you start one, last time's numbers are filled in so you can beat them.</p>
-          <button className="btn btn-primary" onClick={template} disabled={busy}>{busy ? 'Adding…' : 'Start with Push / Pull / Legs'}</button>
+          <button className="btn btn-primary" onClick={template} disabled={busy}>{busy ? 'Adding…' : 'Start with Push / Pull / Legs (5 days a week)'}</button>
           <button className="btn" onClick={() => setNaming(true)}>Make my own routine</button>
         </section>
+      )}
+
+      {up && up.week.length > 0 && (
+        <Section title={`Your week · ${up.week.filter(Boolean).length} workouts`}>
+          <div className="plan-week" aria-label="Your weekly rotation">
+            {up.week.map((id, i) => {
+              const name = id ? data.routines.find(r => r.id === id)?.name ?? '?' : 'Rest'
+              return <span key={i} className={`${id ? '' : 'rest'} ${i === up.index ? 'next' : ''}`} aria-current={i === up.index ? 'step' : undefined}>{name}</span>
+            })}
+          </div>
+        </Section>
       )}
 
       <Section title="Routines" action={<button onClick={() => open({ kind: 'exercises' })}>Exercises</button>}>
@@ -230,6 +244,16 @@ function TrainHome({ nav, data, goal, open, reload }: {
             trail={next?.id === r.id ? <span className="text-accent" style={{ fontSize: 12, fontWeight: 600 }}>Up next</span> : undefined} />
         ))}
         <button type="button" className="group-row accent" onClick={() => begin(null)}><Plus size={20} strokeWidth={2} />Empty workout</button>
+        {!data.schedule && data.routines.length > 0 && (
+          <button type="button" className="group-row accent" disabled={busy} onClick={async () => {
+            const unused = data.routines.filter(r => !data.workouts.some(w => w.routine_id === r.id))
+            if (!confirm(`Switch to the default split? Push, Pull and Legs (2 sets of 6–10), 5 days a week with rest after Legs and at the end of the week.${unused.length ? `\n\n${unused.map(r => r.name).join(', ')} ${unused.length === 1 ? 'has' : 'have'} no workouts logged and will be removed.` : ''}`)) return
+            setBusy(true)
+            try { await switchToTemplate(nav.api, data); reload(); nav.notify('Switched to Push / Pull / Legs') }
+            catch (e) { nav.notify(e instanceof Error ? e.message : 'Could not switch plan') }
+            finally { setBusy(false) }
+          }}><ListChecks size={20} strokeWidth={2} />{busy ? 'Switching…' : 'Use the default Push / Pull / Legs split'}</button>
+        )}
       </Section>
 
       {tips.length > 0 && (
@@ -604,25 +628,61 @@ function ExerciseLibrary({ nav, data, back, open, reload }: {
 
 // ---------------------------------------------------------------------------
 
-const TEMPLATE: [string, [string, Muscle, number, number, number][]][] = [
-  ['Push day', [['Bench press', 'chest', 4, 6, 8], ['Incline DB press', 'chest', 3, 8, 10], ['Overhead press', 'shoulders', 3, 6, 8],
-    ['Lateral raise', 'shoulders', 3, 12, 15], ['Triceps pushdown', 'triceps', 3, 10, 12]]],
-  ['Pull day', [['Barbell row', 'back', 4, 6, 8], ['Lat pulldown', 'back', 3, 8, 12], ['Face pull', 'shoulders', 3, 12, 15],
-    ['Biceps curl', 'biceps', 3, 10, 12]]],
-  ['Legs day', [['Back squat', 'quads', 4, 5, 8], ['Romanian deadlift', 'hamstrings', 3, 8, 10], ['Leg press', 'quads', 3, 10, 12],
-    ['Leg curl', 'hamstrings', 3, 10, 12], ['Calf raise', 'calves', 3, 10, 15]]],
+/** The default plan: Push / Pull / Legs, 2 sets of 6-10 per exercise. Photos from free-exercise-db. */
+const TEMPLATE: [string, [string, Muscle, string | null][]][] = [
+  ['Push', [
+    ['Incline dumbbell press', 'chest', 'Incline_Dumbbell_Press/0.jpg'],
+    ['Cable fly', 'chest', 'Cable_Crossover/0.jpg'],
+    ['Dips', 'chest', 'Dips_-_Chest_Version/0.jpg'],
+    ['Single-arm cuff tricep pushdown', 'triceps', 'Cable_One_Arm_Tricep_Extension/0.jpg'],
+    ['Overhead tricep extension', 'triceps', 'Cable_Rope_Overhead_Triceps_Extension/0.jpg'],
+    ['Cable lateral raise', 'shoulders', 'Cable_Seated_Lateral_Raise/0.jpg'],
+  ]],
+  ['Pull', [
+    ['Lat pulldown', 'back', 'Wide-Grip_Lat_Pulldown/0.jpg'],
+    ['Cable row', 'back', 'Seated_Cable_Rows/0.jpg'],
+    ['Barbell row', 'back', 'Bent_Over_Barbell_Row/0.jpg'],
+    ['Preacher curl', 'biceps', 'Preacher_Curl/0.jpg'],
+    ['Cable bicep curl', 'biceps', 'Standing_Biceps_Cable_Curl/0.jpg'],
+    ['Reverse cable curl', 'biceps', 'Reverse_Cable_Curl/0.jpg'],
+    ['Rear delt fly', 'shoulders', 'Cable_Rear_Delt_Fly/0.jpg'],
+  ]],
+  ['Legs', [
+    ['Leg press', 'quads', 'Leg_Press/0.jpg'],
+    ['Leg curl', 'hamstrings', 'Seated_Leg_Curl/0.jpg'],
+    ['Leg extension', 'quads', 'Leg_Extensions/0.jpg'],
+    ['Romanian deadlift', 'hamstrings', 'Romanian_Deadlift/0.jpg'],
+    ['Ab crunch machine', 'core', 'Ab_Crunch_Machine/0.jpg'],
+  ]],
 ]
+const TEMPLATE_SETS = 2, TEMPLATE_REP_MIN = 6, TEMPLATE_REP_MAX = 10
+/** Push, Pull, Legs, rest, Push, Pull, rest: 5 sessions a week, legs once. Indexes into TEMPLATE. */
+const TEMPLATE_WEEK: (number | null)[] = [0, 1, 2, null, 0, 1, null]
 
 async function createTemplate(api: Api, existing: Exercise[]) {
   const byName = new Map(existing.map(e => [e.name.toLowerCase(), e]))
+  const ids: string[] = []
   for (const [routineName, list] of TEMPLATE) {
     const r = await api.addRoutine(routineName)
+    ids.push(r.id)
     const items: RoutineItem[] = []
-    for (const [name, muscle, sets, lo, hi] of list) {
+    for (const [name, muscle, image] of list) {
       let ex = byName.get(name.toLowerCase())
-      if (!ex) { ex = await api.addExercise(name, muscle); byName.set(name.toLowerCase(), ex) }
-      items.push({ exercise_id: ex.id, target_sets: sets, rep_min: lo, rep_max: hi })
+      if (!ex) { ex = await api.addExercise(name, muscle, image); byName.set(name.toLowerCase(), ex) }
+      items.push({ exercise_id: ex.id, target_sets: TEMPLATE_SETS, rep_min: TEMPLATE_REP_MIN, rep_max: TEMPLATE_REP_MAX })
     }
     await api.setRoutineExercises(r.id, items)
   }
+  // The weekly rest days need the `schedule` column (supabase/schema.sql). Without it the
+  // routines still rotate Push › Pull › Legs, just without rest days.
+  try { await api.setSchedule(TEMPLATE_WEEK.map(i => (i === null ? null : ids[i]))) } catch { /* database not updated yet */ }
+  const goals = await api.getGoals()
+  await api.saveGoals({ ...goals, workouts_per_week: 5 })
+}
+
+/** Swap to the default split: adds Push / Pull / Legs and removes routines you never logged a workout with. */
+async function switchToTemplate(api: Api, data: TrainingData) {
+  const used = new Set(data.workouts.map(w => w.routine_id).filter(Boolean))
+  for (const r of data.routines) if (!used.has(r.id)) await api.deleteRoutine(r.id)
+  await createTemplate(api, data.exercises)
 }

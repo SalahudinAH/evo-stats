@@ -155,6 +155,65 @@ export function nextRoutine(routines: Routine[], workouts: Workout[]): Routine |
   return sorted[0]
 }
 
+export interface NextUp {
+  routine: Routine
+  /** Rest days in the plan between your last workout and this one. */
+  restDays: number
+  /** Your plan says rest today (you trained yesterday and a rest day comes next). */
+  restToday: boolean
+  /** You already trained today. */
+  doneToday: boolean
+  /** The rotation (routine ids, null = rest) and where the next workout sits in it; empty without a plan. */
+  week: (string | null)[]
+  index: number
+}
+
+/**
+ * Where you are in a weekly rotation like Push, Pull, Legs, rest, Push, Pull, rest.
+ * Your recent workouts are matched against the rotation (the longest run that fits wins),
+ * so the second Push of the week is told apart from the first.
+ */
+export function planNext(routines: Routine[], workouts: Workout[], schedule: (string | null)[] | null): NextUp | null {
+  const byId = new Map(routines.map(r => [r.id, r]))
+  const seq = (schedule ?? []).filter(x => x === null || byId.has(x))
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+  const today = new Date()
+  if (!seq.some(x => x)) {
+    const r = nextRoutine(routines, workouts)
+    if (!r) return null
+    const last = workouts[workouts.length - 1]
+    return { routine: r, restDays: 0, restToday: false, doneToday: !!last && sameDay(new Date(last.started_at), today), week: [], index: -1 }
+  }
+  const done = workouts.filter(w => w.routine_id && seq.includes(w.routine_id))
+  const hist = done.map(w => w.routine_id as string)
+  let pos = -1
+  if (hist.length) {
+    let bestScore = -1
+    seq.forEach((id, p) => {
+      if (id !== hist[hist.length - 1]) return
+      let score = 0, q = p, h = hist.length - 1, steps = 0
+      while (h >= 0 && steps < seq.length * 2) {
+        if (seq[q] === null) { /* rest day: skip */ } else if (seq[q] === hist[h]) { score++; h-- } else break
+        q = (q - 1 + seq.length) % seq.length
+        steps++
+      }
+      if (score > bestScore) { bestScore = score; pos = p }
+    })
+  }
+  let restDays = 0
+  let q = (pos + 1) % seq.length
+  for (let i = 0; i < seq.length && seq[q] === null; i++) { restDays++; q = (q + 1) % seq.length }
+  const routine = byId.get(seq[q] as string)!
+  const last = done[done.length - 1] ?? workouts[workouts.length - 1]
+  const doneToday = !!last && sameDay(new Date(last.started_at), today)
+  let restToday = false
+  if (last && !doneToday && restDays > 0) {
+    const daysAgo = Math.round((new Date(today.toDateString()).getTime() - new Date(new Date(last.started_at).toDateString()).getTime()) / 86_400_000)
+    restToday = daysAgo >= 1 && daysAgo <= restDays
+  }
+  return { routine, restDays, restToday, doneToday, week: seq, index: q }
+}
+
 export const MUSCLE_LABEL: Record<Muscle, string> = {
   chest: 'Chest', back: 'Back', shoulders: 'Shoulders', quads: 'Quads', hamstrings: 'Hamstrings', glutes: 'Glutes',
   biceps: 'Biceps', triceps: 'Triceps', calves: 'Calves', core: 'Core', other: 'Other',
