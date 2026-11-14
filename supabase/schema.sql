@@ -338,6 +338,51 @@ begin
   return v_id;
 end $$;
 
+-- Steps (and, with an Apple Watch, active energy) per day, sent by an iPhone Shortcut
+-- from Apple Health. The app turns it into calories burned for that day.
+create table if not exists public.daily_activity (
+  user_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  day         date not null,
+  steps       int not null default 0 check (steps >= 0),
+  active_kcal numeric(7,1) check (active_kcal is null or active_kcal >= 0),
+  updated_at  timestamptz not null default now(),
+  primary key (user_id, day)
+);
+alter table public.daily_activity enable row level security;
+drop policy if exists own_rows on public.daily_activity;
+create policy own_rows on public.daily_activity for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- "Add calories burned to my daily goal" (steps and workouts).
+alter table public.user_settings add column if not exists add_burned boolean not null default false;
+
+-- Called by the Shortcut several times a day; the latest numbers for the day win.
+create or replace function public.log_activity(p_token uuid, p_steps numeric, p_active_kcal numeric default null, p_day date default null)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user uuid;
+  v_day date := coalesce(p_day, (now() at time zone 'Europe/Oslo')::date);
+  v_steps int := greatest(0, round(coalesce(p_steps, 0)))::int;
+  v_kcal numeric := case when coalesce(p_active_kcal, 0) > 0 then round(p_active_kcal, 1) end;
+begin
+  select user_id into v_user from shortcut_tokens where token = p_token;
+  if v_user is null then
+    raise exception 'invalid shortcut key' using errcode = '28000';
+  end if;
+  insert into daily_activity (user_id, day, steps, active_kcal, updated_at)
+  values (v_user, v_day, v_steps, v_kcal, now())
+  on conflict (user_id, day) do update
+    set steps = excluded.steps, active_kcal = excluded.active_kcal, updated_at = now();
+  return json_build_object('saved', true, 'message', 'Activity saved: ' || v_steps || ' steps');
+end $$;
+
+revoke all on function public.log_activity(uuid, numeric, numeric, date) from public;
+grant execute on function public.log_activity(uuid, numeric, numeric, date) to anon, authenticated;
+
 -- "Delete my account" in Settings. Removes the login; every table points at
 -- auth.users with "on delete cascade", so all of that user's data goes too.
 create or replace function public.delete_my_account()

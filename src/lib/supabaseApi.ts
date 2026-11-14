@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { BusynessNotSetUp, DEFAULT_GOALS } from './types'
 import type {
   Busyness,
+  DailyActivity,
   Schedule,
   Api, CheckInResult, Club, Exercise, Food, FoodEntry, Goals, Routine, RoutineExercise, Visit, Weight, Workout, WorkoutSet,
 } from './types'
@@ -177,6 +178,27 @@ export function createSupabaseApi(): Api {
       if (items.length) {
         check(await db.from('routine_exercises').insert(items.map((it, i) => ({ ...it, routine_id: routineId, position: i }))))
       }
+    },
+
+    async getActivity(day) {
+      const res = await db.from('daily_activity').select('day, steps, active_kcal, updated_at').eq('day', day).limit(1)
+      if (res.error && ['42P01', 'PGRST205'].includes(res.error.code)) return null // table not created yet
+      const rows = check(res) as DailyActivity[]
+      const r = rows[0]
+      return r ? { ...r, active_kcal: r.active_kcal === null ? null : Number(r.active_kcal) } : null
+    },
+    async getAddBurned() {
+      const res = await db.from('user_settings').select('add_burned').limit(1)
+      if (res.error?.code === '42703') return false
+      const rows = check(res) as { add_burned: boolean }[]
+      return rows[0]?.add_burned ?? false
+    },
+    async setAddBurned(on) {
+      const { data } = await db.auth.getSession()
+      if (!data.session) throw new Error('Not signed in')
+      const res = await db.from('user_settings').upsert({ user_id: data.session.user.id, add_burned: on })
+      if (res.error && ['42703', 'PGRST204'].includes(res.error.code)) throw new Error('Run the latest supabase/schema.sql first (adds the add_burned setting).')
+      check(res)
     },
 
     async getSchedule() {

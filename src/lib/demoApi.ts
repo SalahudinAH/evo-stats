@@ -135,6 +135,7 @@ export function createDemoApi(): Api {
 
   // Push, Pull, Legs, rest, Push, Pull, rest.
   let schedule: (string | null)[] | null = [routines[0].id, routines[1].id, routines[2].id, null, routines[0].id, routines[1].id, null]
+  let addBurned = true
   let goals: Goals = {
     ...DEFAULT_GOALS, sex: 'male', birth_year: 2000, height_cm: 180, activity: 'moderate',
     goal_weight_kg: 83, plan: 'lean_bulk', onboarded: !new URLSearchParams(window.location.search).has('onboarding'),
@@ -229,6 +230,13 @@ export function createDemoApi(): Api {
     async deleteFoodEntry(eid) { remove(entries, eid) },
     async moveFoodEntry(eid, meal) { const e = entries.find(x => x.id === eid); if (e) e.meal = meal },
 
+    async getActivity(day) {
+      await wait()
+      const today = new Date().toISOString().slice(0, 10)
+      return day === today ? { day, steps: 8940, active_kcal: null, updated_at: new Date().toISOString() } : null
+    },
+    async getAddBurned() { return addBurned },
+    async setAddBurned(on) { addBurned = on },
     async getSchedule() { await wait(); return schedule ? [...schedule] : null },
     async setSchedule(sc) { schedule = sc ? [...sc] : null },
     async getGoals() { return { ...goals } },

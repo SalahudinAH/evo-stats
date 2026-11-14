@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, GripVertical, Minus, Pencil, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Footprints, GripVertical, Minus, Pencil, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
 import type { Nav } from '../App'
 import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
 import { useLoad } from '../lib/hooks'
@@ -7,6 +7,7 @@ import { kcalFromMacros, planLabel, scaleMacros } from '../lib/nutrition'
 import { IconSearch, LargeTitle, Row, Section, Sheet } from '../components/ui'
 import { BarcodeScanner } from '../components/Scanner'
 import { lookupBarcode, searchProducts, TooManySearches, type ScannedProduct } from '../lib/openFoodFacts'
+import { useBudget } from '../lib/burn'
 
 const DAY = 24 * 3600 * 1000
 const MEAL_LABEL: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' }
@@ -44,7 +45,8 @@ export function FoodScreen({ nav }: { nav: Nav }) {
 
   const list = entries.data ?? []
   const total = sumMacros(list)
-  const g = goals.data
+  const budget = useBudget(nav.api, goals.data, from, to)
+  const g = budget.goal
   const left = g ? g.kcal - total.kcal : 0
 
   // Your most-logged foods in the last 30 days, for one-tap adding.
@@ -175,6 +177,21 @@ export function FoodScreen({ nav }: { nav: Nav }) {
           <div><span className="k">Carbs</span><span className="v">{Math.round(total.carbs)}<span> / {g?.carbs ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.carbs, g?.carbs), background: 'var(--carbs)' }} /></span></div>
           <div><span className="k">Fat</span><span className="v">{Math.round(total.fat)}<span> / {g?.fat ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.fat, g?.fat), background: 'var(--fat)' }} /></span></div>
         </div>
+        {budget.burn && (
+          <div className="burn-row">
+            <Footprints size={16} strokeWidth={2.2} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              {budget.burn.fromHealth !== null
+                ? <>Active energy <b>{budget.burn.fromHealth} kcal</b> · {budget.burn.steps.toLocaleString('en-GB')} steps</>
+                : <>{budget.burn.steps.toLocaleString('en-GB')} steps{budget.burn.workoutMinutes ? ` · ${budget.burn.workoutMinutes} min training` : ''} ≈ <b>{budget.burn.total} kcal</b></>}
+              {budget.on && budget.base !== null && <span className="muted"> · goal {Math.round(budget.base).toLocaleString('en-GB')} + {budget.burn.total} burned</span>}
+            </span>
+            {!budget.on && <button className="link-btn" onClick={async () => {
+              try { await nav.api.setAddBurned(true); budget.reload(); nav.notify('Burned calories are added to your goal') }
+              catch (e) { nav.notify(e instanceof Error ? e.message : 'Could not change the setting') }
+            }}>Add to goal</button>}
+          </div>
+        )}
       </section>
 
       {usual.length > 0 && offset === 0 && (
@@ -248,8 +265,8 @@ export function FoodScreen({ nav }: { nav: Nav }) {
           }}><Trash2 size={18} strokeWidth={2} />Delete</button>
         </Sheet>
       )}
-      {editGoals && g && (
-        <GoalsSheet api={nav.api} goals={g} onReplan={() => { setEditGoals(false); nav.openPlanner() }} onClose={() => setEditGoals(false)} onSaved={() => { setEditGoals(false); goals.reload(); nav.notify('Goals saved') }} />
+      {editGoals && goals.data && (
+        <GoalsSheet api={nav.api} goals={goals.data} onReplan={() => { setEditGoals(false); nav.openPlanner() }} onClose={() => setEditGoals(false)} onSaved={() => { setEditGoals(false); goals.reload(); budget.reload(); nav.notify('Goals saved') }} />
       )}
     </div>
   )
@@ -511,6 +528,10 @@ export function GoalsSheet({ api, goals, onClose, onSaved, onReplan }: {
   const [base, setBase] = useState({ protein: goals.protein, carbs: goals.carbs, fat: goals.fat })
   const [m, setM] = useState({ protein: String(goals.protein), carbs: String(goals.carbs), fat: String(goals.fat) })
   const [wpw, setWpw] = useState(String(goals.workouts_per_week))
+  const [addBurned, setAddBurned] = useState(false)
+  const [addBurnedWas, setAddBurnedWas] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  useEffect(() => { api.getAddBurned().then(v => { setAddBurned(v); setAddBurnedWas(v) }, () => undefined) }, [api])
   const n = (s: string) => Math.max(0, Math.round(parseFloat(s.replace(',', '.')) || 0))
 
   function changeKcal(v: string) {
@@ -543,11 +564,22 @@ export function GoalsSheet({ api, goals, onClose, onSaved, onReplan }: {
       </div>
       <p className="tiny muted">Change calories and the macros scale with them. Change a macro and the calories follow (protein and carbs 4 kcal/g, fat 9 kcal/g).</p>
       <label>Workouts per week<input inputMode="numeric" value={wpw} onChange={e => setWpw(e.target.value)} /></label>
+      <label className="check-row">
+        <input type="checkbox" checked={addBurned} onChange={e => setAddBurned(e.target.checked)} />
+        <span>Add calories burned to the day
+          <span className="tiny muted" style={{ display: 'block', marginTop: 2 }}>Steps from Apple Health and your workouts are added on top. The activity already in your goal is taken out, so nothing counts twice.</span>
+        </span>
+      </label>
+      {err && <p className="error">{err}</p>}
       <button className="btn btn-primary" onClick={async () => {
+        setErr(null)
         await api.saveGoals({
           ...goals, kcal: n(kcal) || 2000, protein: n(m.protein), carbs: n(m.carbs), fat: n(m.fat),
           workouts_per_week: Math.min(14, Math.max(1, n(wpw) || 1)),
         })
+        if (addBurned !== addBurnedWas) {
+          try { await api.setAddBurned(addBurned) } catch (e) { setErr(e instanceof Error ? e.message : 'Could not save that setting'); return }
+        }
         onSaved()
       }}>Save</button>
     </Sheet>

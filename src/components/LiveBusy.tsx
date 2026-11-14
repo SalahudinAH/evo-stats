@@ -69,7 +69,7 @@ export function LiveBusy({ state }: { state: State }) {
   if (state.status === 'setup') return (
     <div className="card busy-card">
       <span className="small" style={{ fontWeight: 600 }}>Live busyness isn't switched on yet</span>
-      <span className="tiny muted">It needs a one-time setup in Supabase. See More › Settings & Shortcuts › 5. Live busyness.</span>
+      <span className="tiny muted">It needs a one-time setup in Supabase. See More › Settings & Shortcuts › 6. Live busyness.</span>
     </div>
   )
   if (state.status === 'error') return <div className="card busy-card"><span className="small muted">{state.message}</span></div>

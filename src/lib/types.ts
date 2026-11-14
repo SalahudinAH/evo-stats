@@ -69,6 +69,8 @@ export interface RoutineExercise {
   rep_max: number
 }
 
+export interface DailyActivity { day: string; steps: number; active_kcal: number | null; updated_at: string }
+
 export type Schedule = (string | null)[]
 
 export type RoutineItem = Pick<RoutineExercise, 'exercise_id' | 'target_sets' | 'rep_min' | 'rep_max'>
@@ -195,6 +197,11 @@ export interface Api {
   addFoodEntry(e: NewFoodEntry): Promise<void>
   deleteFoodEntry(id: string): Promise<void>
   moveFoodEntry(id: string, meal: Meal): Promise<void>
+  /** Steps (and Apple Watch active energy) for a day, from the Apple Health Shortcut. `day` is YYYY-MM-DD. */
+  getActivity(day: string): Promise<DailyActivity | null>
+  /** "Add calories burned to my daily goal". */
+  getAddBurned(): Promise<boolean>
+  setAddBurned(on: boolean): Promise<void>
 
   getGoals(): Promise<Goals>
   saveGoals(g: Goals): Promise<void>

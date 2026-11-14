@@ -5,6 +5,7 @@ import { countSince, startOfWeek, weekStreak } from '../lib/stats'
 import { buildDraft } from '../lib/draft'
 import { findPRs, planNext, previousWorkout, volume, workingSets } from '../lib/training'
 import { loadSkips } from '../lib/skips'
+import { useBudget } from '../lib/burn'
 import { Check, ChevronRight, Dumbbell, Flame, MapPin, Play, Star, Users } from 'lucide-react'
 import { CENTRES, googleMapsUrl, openStatus } from '../lib/evoCentres'
 import { distanceMeters, hourlyPattern } from '../lib/stats'
@@ -45,7 +46,9 @@ export function Today({ nav }: { nav: Nav }) {
   const streak = weekStreak(list)
   const weekStart = startOfWeek(new Date(now))
   const thisWeekVisits = list.filter(v => new Date(v.visited_at) >= weekStart)
-  const g = goals.data
+  const today0 = new Date(new Date(now).toDateString())
+  const budget = useBudget(api, goals.data, today0, new Date(today0.getTime() + 86_400_000))
+  const g = budget.goal
   const eaten = sumMacros(food.data ?? [])
   const w = weights.data ?? []
   const latestW = w[w.length - 1]

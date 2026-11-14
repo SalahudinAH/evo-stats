@@ -78,6 +78,7 @@ export function Settings({ api, notify }: { api: Api; notify: (m: string) => voi
         <Copy label="Header: apikey" value={pubKey} />
         <Copy label="URL: log a visit" value={`${base}/rest/v1/rpc/log_visit`} />
         <Copy label="URL: log weight" value={`${base}/rest/v1/rpc/log_weight`} />
+        <Copy label="URL: log steps" value={`${base}/rest/v1/rpc/log_activity`} />
       </section>
 
       <section className="card guide">
@@ -110,8 +111,24 @@ p_measured_at  [Formatted Date]   (Text)`}</pre>
         <p className="muted small">Running daily also keeps the free database awake. Free Supabase projects pause after a week with no activity.</p>
       </section>
 
+      <section className="card guide" id="steps">
+        <h2>5. Sync steps from Apple Health</h2>
+        <p className="muted small">Sends today's steps (and Active Energy if you wear an Apple Watch) so Food can add the calories you burned. Turn it on under Food › Calorie &amp; macro goals.</p>
+        <ol>
+          <li><b>Automation</b> › <b>+</b> › <b>Time of Day</b>, Daily, <b>Run Immediately</b>. Make a few: e.g. 12:00, 17:00, 21:00 and 23:30. Each run replaces the day's numbers.</li>
+          <li>Add <b>Find Health Samples</b>: Type <b>Steps</b>, Start Date <b>is today</b>.</li>
+          <li>Add <b>Calculate Statistics</b> › <b>Sum</b> of the Health Samples.</li>
+          <li>Optional, with an Apple Watch: another <b>Find Health Samples</b> for <b>Active Energy</b>, today, and its <b>Sum</b>.</li>
+          <li>Add <b>Get Contents of URL</b>: URL <i>log steps</i>, POST, header <code>apikey</code>, JSON body:</li>
+        </ol>
+        <pre>{`p_token        ${token}        (Text)
+p_steps        [Sum of steps]          (Number)
+p_active_kcal  [Sum of active energy]  (Number, optional)`}</pre>
+        <p className="muted small">How it's counted: about 0.5 kcal per kg of body weight per km walked (roughly 0.38 kcal per 1,000 steps per kg), plus about 4 kcal per kg per hour of strength training from your logged workouts. With Active Energy from an Apple Watch, that's used instead.</p>
+      </section>
+
       <section className="card guide" id="live-busyness">
-        <h2>5. Live busyness</h2>
+        <h2>6. Live busyness</h2>
         <p className="muted small">Shows how many people are training at a centre right now, from EVO's own EVO Visits page. EVO only lets its own site read those numbers, so a small function in your Supabase project fetches them for the app. Set it up once:</p>
         <ol>
           <li>Open your project on <b>supabase.com</b> › <b>Edge Functions</b> › <b>Deploy a new function</b> › <b>Via Editor</b>.</li>
