@@ -227,6 +227,7 @@ export function createDemoApi(): Api {
     },
     async addFoodEntry(e) { entries.push({ ...e, id: id(), eaten_at: e.eaten_at ?? new Date().toISOString() }) },
     async deleteFoodEntry(eid) { remove(entries, eid) },
+    async moveFoodEntry(eid, meal) { const e = entries.find(x => x.id === eid); if (e) e.meal = meal },
 
     async getSchedule() { await wait(); return schedule ? [...schedule] : null },
     async setSchedule(sc) { schedule = sc ? [...sc] : null },

@@ -215,6 +215,7 @@ export function createSupabaseApi(): Api {
     },
     async addFoodEntry(e) { check(await db.from('food_entries').insert(e)) },
     async deleteFoodEntry(id) { check(await db.from('food_entries').delete().eq('id', id)) },
+    async moveFoodEntry(id, meal) { check(await db.from('food_entries').update({ meal }).eq('id', id)) },
 
     async getGoals() {
       const res = await db.from('user_settings')

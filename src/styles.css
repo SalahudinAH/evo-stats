@@ -590,3 +590,12 @@ html.ios-short .rest-pill { bottom: 16px; }
 .wk-stepper.serv { grid-template-columns: 48px 72px 48px; gap: 8px; }
 .wk-stepper.serv button, .wk-stepper.serv input { height: 48px; min-height: 48px; }
 .wk-stepper.serv input { font-size: 22px; background: var(--surface-2); }
+
+/* Food: drag a food to another meal */
+.drag-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.drag-item { position: relative; }
+.drag-item + .drag-item::before, .drag-item + .group-row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--line); z-index: 1; }
+.drag-item.dragging { opacity: 0.35; }
+.meal-drop { border-radius: 16px; transition: background 0.15s ease; }
+.meal-drop.drop-target .group { box-shadow: 0 0 0 2px var(--accent-text); }
+.drag-ghost { position: fixed; z-index: 70; transform: translate(-50%, -130%); pointer-events: none; display: flex; align-items: center; gap: 6px; max-width: 70vw; padding: 10px 14px; border-radius: 14px; background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 15px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

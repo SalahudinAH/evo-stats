@@ -194,6 +194,7 @@ export interface Api {
   listFoodEntries(fromIso: string, toIso: string): Promise<FoodEntry[]>
   addFoodEntry(e: NewFoodEntry): Promise<void>
   deleteFoodEntry(id: string): Promise<void>
+  moveFoodEntry(id: string, meal: Meal): Promise<void>
 
   getGoals(): Promise<Goals>
   saveGoals(g: Goals): Promise<void>

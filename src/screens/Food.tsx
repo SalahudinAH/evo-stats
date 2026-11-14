@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Minus, Pencil, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, GripVertical, Minus, Pencil, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
 import type { Nav } from '../App'
 import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
 import { useLoad } from '../lib/hooks'
@@ -67,6 +67,78 @@ export function FoodScreen({ nav }: { nav: Nav }) {
   const [scanning, setScanning] = useState(false)
   const [scanned, setScanned] = useState<{ code: string; product?: ScannedProduct; meal?: Meal } | null>(null)
   const [entryMenu, setEntryMenu] = useState<FoodEntry | null>(null)
+  // Press and hold a food, then drag it to another meal (works with touch and mouse).
+  const [drag, setDrag] = useState<{ id: string; name: string; from: Meal; over: Meal | null; x: number; y: number } | null>(null)
+  const [moved, setMoved] = useState<Record<string, Meal>>({})
+  const dragging = useRef(false)
+  const suppressClick = useRef(false)
+  const shown = list.map(e => (moved[e.id] ? { ...e, meal: moved[e.id] } : e))
+
+  // While dragging, stop the page from scrolling under your finger (needs a non-passive listener).
+  useEffect(() => {
+    const stop = (ev: TouchEvent) => { if (dragging.current) ev.preventDefault() }
+    document.addEventListener('touchmove', stop, { passive: false })
+    return () => document.removeEventListener('touchmove', stop)
+  }, [])
+
+  async function moveEntry(e: FoodEntry, meal: Meal) {
+    if (e.meal === meal) return
+    setMoved(m => ({ ...m, [e.id]: meal }))
+    try {
+      await nav.api.moveFoodEntry(e.id, meal)
+      nav.notify(`${e.name} moved to ${MEAL_LABEL[meal].toLowerCase()}`)
+      reload()
+    } catch {
+      setMoved(m => { const n = { ...m }; delete n[e.id]; return n })
+      nav.notify('Could not move it. Try again.')
+    }
+  }
+
+  function startDrag(ev: React.PointerEvent, entry: FoodEntry) {
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return
+    const startX = ev.clientX, startY = ev.clientY
+    let active = false
+    let over: Meal | null = entry.meal
+    const scroller = document.querySelector('main')
+    const timer = window.setTimeout(() => {
+      active = true
+      dragging.current = true
+      navigator.vibrate?.(15)
+      setDrag({ id: entry.id, name: entry.name, from: entry.meal, over, x: startX, y: startY })
+    }, 350)
+    const meal = (x: number, y: number) => (document.elementFromPoint(x, y)?.closest('[data-meal]') as HTMLElement | null)?.dataset.meal as Meal | undefined
+    const move = (e: PointerEvent) => {
+      if (!active) {
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) > 8) end()
+        return
+      }
+      over = meal(e.clientX, e.clientY) ?? over
+      if (scroller) {
+        if (e.clientY < 140) scroller.scrollBy(0, -14)
+        else if (e.clientY > window.innerHeight - 170) scroller.scrollBy(0, 14)
+      }
+      setDrag(d => (d ? { ...d, over, x: e.clientX, y: e.clientY } : d))
+    }
+    const up = () => {
+      if (active) {
+        suppressClick.current = true
+        window.setTimeout(() => { suppressClick.current = false }, 400)
+        if (over && over !== entry.meal) moveEntry(entry, over)
+      }
+      end()
+    }
+    const end = () => {
+      window.clearTimeout(timer)
+      dragging.current = false
+      setDrag(null)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', end)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', end)
+  }
   const pct = (v: number, goal: number | undefined) => `${goal ? Math.min(100, (v / goal) * 100) : 0}%`
 
   return (
@@ -115,22 +187,37 @@ export function FoodScreen({ nav }: { nav: Nav }) {
       )}
 
       {MEALS.map(meal => {
-        const items = list.filter(e => e.meal === meal)
+        const items = shown.filter(e => e.meal === meal)
         const kcal = sumMacros(items).kcal
+        const target = drag?.over === meal && drag.over !== drag.from
         return (
-          <Section key={meal} title={`${MEAL_LABEL[meal]}${kcal > 0 ? ` · ${Math.round(kcal)} kcal` : ''}`}
-            action={items.length ? <button aria-label={`Add food to ${MEAL_LABEL[meal]}`} onClick={() => setAdding(meal)}><Plus size={22} strokeWidth={2.2} /></button> : undefined}>
-            {items.map(e => (
-              <Row key={e.id} title={e.name} onClick={() => setEntryMenu(e)}
-                sub={`${e.serving ? `${e.serving} · ` : ''}P ${round1(e.protein)} · C ${round1(e.carbs)} · F ${round1(e.fat)}`}
-                trail={<span style={{ fontSize: 17 }}>{Math.round(e.kcal)}</span>} />
-            ))}
-            {!items.length && (
-              <button type="button" className="group-row accent" onClick={() => setAdding(meal)}><Plus size={20} strokeWidth={2} />Add {MEAL_LABEL[meal].toLowerCase()}</button>
-            )}
-          </Section>
+          <div key={meal} data-meal={meal} className={`meal-drop ${target ? 'drop-target' : ''}`}>
+            <Section title={`${MEAL_LABEL[meal]}${kcal > 0 ? ` · ${Math.round(kcal)} kcal` : ''}`}
+              action={items.length ? <button aria-label={`Add food to ${MEAL_LABEL[meal]}`} onClick={() => setAdding(meal)}><Plus size={22} strokeWidth={2.2} /></button> : undefined}>
+              {items.map(e => (
+                <div key={e.id} className={`drag-item ${drag?.id === e.id ? 'dragging' : ''}`} onPointerDown={ev => startDrag(ev, e)}
+                  onContextMenu={ev => ev.preventDefault()}>
+                  <Row title={e.name} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return } setEntryMenu(e) }}
+                    sub={`${e.serving ? `${e.serving} · ` : ''}P ${round1(e.protein)} · C ${round1(e.carbs)} · F ${round1(e.fat)}`}
+                    trail={<span style={{ fontSize: 17 }}>{Math.round(e.kcal)}</span>} />
+                </div>
+              ))}
+              {!items.length && (
+                <button type="button" className="group-row accent" onClick={() => setAdding(meal)}>
+                  <Plus size={20} strokeWidth={2} />{target ? `Move to ${MEAL_LABEL[meal].toLowerCase()}` : `Add ${MEAL_LABEL[meal].toLowerCase()}`}
+                </button>
+              )}
+            </Section>
+          </div>
         )
       })}
+      {list.length > 1 && <p className="tiny muted" style={{ padding: '0 16px', marginTop: -4 }}>Press and hold a food to drag it to another meal.</p>}
+
+      {drag && (
+        <div className="drag-ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
+          <GripVertical size={16} strokeWidth={2.2} />{drag.name}
+        </div>
+      )}
 
       <button className="btn" style={{ marginTop: 8 }} onClick={() => setEditGoals(true)}>Calorie & macro goals</button>
 
@@ -151,6 +238,9 @@ export function FoodScreen({ nav }: { nav: Nav }) {
       {entryMenu && (
         <Sheet title={entryMenu.name} onClose={() => setEntryMenu(null)}>
           <p className="small muted">{entryMenu.serving ? `${entryMenu.serving} · ` : ''}{Math.round(entryMenu.kcal)} kcal · P {round1(entryMenu.protein)} · C {round1(entryMenu.carbs)} · F {round1(entryMenu.fat)}</p>
+          <div className="seg seg-sm" role="group" aria-label="Move to meal">
+            {MEALS.map(m => <button key={m} aria-pressed={(moved[entryMenu.id] ?? entryMenu.meal) === m} onClick={() => { moveEntry(entryMenu, m); setEntryMenu(null) }}>{MEAL_LABEL[m]}</button>)}
+          </div>
           <button className="btn btn-danger-quiet" onClick={async () => {
             await nav.api.deleteFoodEntry(entryMenu.id)
             setEntryMenu(null)
