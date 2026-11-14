@@ -570,6 +570,7 @@ html.ios-short .rest-pill { bottom: 16px; }
 .wk-stepper button { height: 52px; border-radius: 14px; border: 0; background: var(--surface-2); color: var(--text); display: grid; place-items: center; cursor: pointer; }
 .wk-stepper button:active { background: var(--surface-3); }
 .wk-stepper input { height: 52px; min-height: 52px; border-radius: 14px; border: 0; background: #0b0b0b; text-align: center; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 0; }
+.wk-stepper input::placeholder { color: var(--muted); opacity: 0.55; }
 .wk-log { height: 56px; border: 0; border-radius: 16px; background: var(--accent); color: #fff; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
 .wk-log:active { background: var(--accent-strong); }
 .wk-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 2px; }

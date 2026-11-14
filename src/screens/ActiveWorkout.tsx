@@ -209,7 +209,7 @@ export function ActiveWorkout({ nav, draft, setDraft, onMinimise, onDiscard }: {
                       onChange={v => updateSet(ex.key, s.key, { weight: v })}
                       onStep={dir => updateSet(ex.key, s.key, { weight: fmtKg(Math.max(0, wNum + dir * kgStep(wNum + (dir < 0 ? -0.01 : 0)))) })} />
                     <Stepper label="REPS" value={r} inputMode="numeric"
-                      onChange={v => updateSet(ex.key, s.key, { reps: v.replace(/\D/g, '') })}
+                      onChange={v => updateSet(ex.key, s.key, { reps: v })}
                       onStep={dir => updateSet(ex.key, s.key, { reps: String(Math.max(1, rNum + dir)) })} />
                     <button className="wk-log" onClick={() => log(ex, s)}><Check size={20} strokeWidth={2.8} />Log set {label}</button>
                   </div>
@@ -302,16 +302,27 @@ export function ActiveWorkout({ nav, draft, setDraft, onMinimise, onDiscard }: {
   )
 }
 
+/**
+ * Tap the number and it empties, with the old value shown greyed out, so you just type the new one
+ * (no selecting or deleting first). Leave it empty and the old value stays.
+ */
 function Stepper({ label, value, inputMode, onChange, onStep }: {
   label: string; value: string; inputMode: 'decimal' | 'numeric'; onChange: (v: string) => void; onStep: (dir: 1 | -1) => void
 }) {
+  const [typing, setTyping] = useState<string | null>(null)
+  const clean = (v: string) => inputMode === 'numeric' ? v.replace(/\D/g, '') : v.replace(/[^\d.,]/g, '')
+  const step = (dir: 1 | -1) => { setTyping(null); onStep(dir) }
   return (
     <div className="wk-stepper">
       <span className="lbl">{label}</span>
-      <button type="button" aria-label={`Less ${label.toLowerCase()}`} onClick={() => onStep(-1)}><Minus size={22} strokeWidth={2.6} /></button>
-      <input inputMode={inputMode} aria-label={label === 'KG' ? 'Weight in kg' : 'Reps'} value={value}
-        onFocus={e => e.target.select()} onChange={e => onChange(e.target.value)} />
-      <button type="button" aria-label={`More ${label.toLowerCase()}`} onClick={() => onStep(1)}><Plus size={22} strokeWidth={2.6} /></button>
+      <button type="button" aria-label={`Less ${label.toLowerCase()}`} onClick={() => step(-1)}><Minus size={22} strokeWidth={2.6} /></button>
+      <input inputMode={inputMode} aria-label={label === 'KG' ? 'Weight in kg' : 'Reps'}
+        value={typing ?? value} placeholder={typing !== null ? value : undefined}
+        onFocus={() => setTyping('')}
+        onBlur={() => setTyping(null)}
+        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+        onChange={e => { const v = clean(e.target.value); setTyping(v); if (v !== '') onChange(v) }} />
+      <button type="button" aria-label={`More ${label.toLowerCase()}`} onClick={() => step(1)}><Plus size={22} strokeWidth={2.6} /></button>
     </div>
   )
 }
