@@ -82,6 +82,8 @@ export interface Nav {
   openPlanner: () => void
   /** Bumps when goals change, so screens showing them reload. */
   goalsVersion: number
+  /** The signed-in user's id ("demo" in the demo), for things kept on this phone. */
+  owner: string
 }
 
 function Shell({ api, owner }: { api: Api; owner: string }) {
@@ -133,6 +135,7 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
     openWorkout: () => { setWorkoutOpen(true); scrollToTop() },
     openPlanner: () => { setPlanning(true); scrollToTop() },
     goalsVersion,
+    owner,
   }
   // First sign-in: ask for body stats before anything else.
   const needsSetup = !!goals.data && !goals.data.onboarded

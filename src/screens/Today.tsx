@@ -4,6 +4,7 @@ import { useLoad, useNow, useTraining } from '../lib/hooks'
 import { countSince, startOfWeek, weekStreak } from '../lib/stats'
 import { buildDraft } from '../lib/draft'
 import { findPRs, planNext, previousWorkout, volume, workingSets } from '../lib/training'
+import { loadSkips } from '../lib/skips'
 import { Check, ChevronRight, Dumbbell, Flame, MapPin, Play, Star, Users } from 'lucide-react'
 import { CENTRES, googleMapsUrl, openStatus } from '../lib/evoCentres'
 import { distanceMeters, hourlyPattern } from '../lib/stats'
@@ -54,7 +55,7 @@ export function Today({ nav }: { nav: Nav }) {
   })()
 
   const todaysWorkout = t.data ? [...t.data.workouts].reverse().find(x => new Date(x.started_at).toDateString() === new Date(now).toDateString()) : null
-  const up = t.data ? planNext(t.data.routines, t.data.workouts, t.data.schedule) : null
+  const up = t.data ? planNext(t.data.routines, t.data.workouts, t.data.schedule, loadSkips(nav.owner)) : null
   const next = up?.routine ?? null
 
   async function checkIn() {

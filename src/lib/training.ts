@@ -166,14 +166,28 @@ export interface NextUp {
   /** The rotation (routine ids, null = rest) and where the next workout sits in it; empty without a plan. */
   week: (string | null)[]
   index: number
+  /** The last thing this week was a skip of this routine (for "Undo"). */
+  skipped: Routine | null
+}
+
+/** A planned workout you chose to skip ("Skip" on Up next). */
+export interface Skip { routine_id: string; at: string }
+
+/** Monday 00:00 of the current week, local time. */
+export function startOfWeek(d = new Date()): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7))
+  return x
 }
 
 /**
  * Where you are in a weekly rotation like Push, Pull, Legs, rest, Push, Pull, rest.
- * Your recent workouts are matched against the rotation (the longest run that fits wins),
- * so the second Push of the week is told apart from the first.
+ * The rotation starts over every Monday: only this week's workouts (and skips) count, so a
+ * missed workout late in the week is dropped instead of pushing next week out of line.
+ * Within the week the longest run of what you did that fits the rotation wins, so the second
+ * Push of the week is told apart from the first.
  */
-export function planNext(routines: Routine[], workouts: Workout[], schedule: (string | null)[] | null): NextUp | null {
+export function planNext(routines: Routine[], workouts: Workout[], schedule: (string | null)[] | null, skips: Skip[] = []): NextUp | null {
   const byId = new Map(routines.map(r => [r.id, r]))
   const seq = (schedule ?? []).filter(x => x === null || byId.has(x))
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
@@ -182,10 +196,15 @@ export function planNext(routines: Routine[], workouts: Workout[], schedule: (st
     const r = nextRoutine(routines, workouts)
     if (!r) return null
     const last = workouts[workouts.length - 1]
-    return { routine: r, restDays: 0, restToday: false, doneToday: !!last && sameDay(new Date(last.started_at), today), week: [], index: -1 }
+    return { routine: r, restDays: 0, restToday: false, doneToday: !!last && sameDay(new Date(last.started_at), today), week: [], index: -1, skipped: null }
   }
+  const weekStart = startOfWeek(today).getTime()
   const done = workouts.filter(w => w.routine_id && seq.includes(w.routine_id))
-  const hist = done.map(w => w.routine_id as string)
+  const events = [
+    ...done.map(w => ({ id: w.routine_id as string, at: new Date(w.started_at).getTime(), skip: false })),
+    ...skips.filter(s => seq.includes(s.routine_id)).map(s => ({ id: s.routine_id, at: new Date(s.at).getTime(), skip: true })),
+  ].filter(e => e.at >= weekStart).sort((x, y) => x.at - y.at)
+  const hist = events.map(e => e.id)
   let pos = -1
   if (hist.length) {
     let bestScore = -1
@@ -204,14 +223,17 @@ export function planNext(routines: Routine[], workouts: Workout[], schedule: (st
   let q = (pos + 1) % seq.length
   for (let i = 0; i < seq.length && seq[q] === null; i++) { restDays++; q = (q + 1) % seq.length }
   const routine = byId.get(seq[q] as string)!
-  const last = done[done.length - 1] ?? workouts[workouts.length - 1]
-  const doneToday = !!last && sameDay(new Date(last.started_at), today)
+  // Rest-day hints only come from real workouts this week, never from a skip.
+  const lastEvent = events[events.length - 1]
+  const lastWorkout = [...events].reverse().find(e => !e.skip)
+  const doneToday = !!lastWorkout && sameDay(new Date(lastWorkout.at), today)
   let restToday = false
-  if (last && !doneToday && restDays > 0) {
-    const daysAgo = Math.round((new Date(today.toDateString()).getTime() - new Date(new Date(last.started_at).toDateString()).getTime()) / 86_400_000)
+  if (lastEvent && !lastEvent.skip && !doneToday && restDays > 0) {
+    const daysAgo = Math.round((new Date(today.toDateString()).getTime() - new Date(new Date(lastEvent.at).toDateString()).getTime()) / 86_400_000)
     restToday = daysAgo >= 1 && daysAgo <= restDays
   }
-  return { routine, restDays, restToday, doneToday, week: seq, index: q }
+  const skipped = lastEvent?.skip ? byId.get(lastEvent.id) ?? null : null
+  return { routine, restDays, restToday, doneToday, week: seq, index: q, skipped }
 }
 
 export const MUSCLE_LABEL: Record<Muscle, string> = {

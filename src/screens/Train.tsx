@@ -8,8 +8,9 @@ import { e1rm, startOfWeek } from '../lib/stats'
 import {
   bestE1rm, fmtKg, insights, MUSCLE_LABEL, planNext, setsText, suggest, volume, workingSets,
 } from '../lib/training'
+import { addSkip, loadSkips, undoSkip } from '../lib/skips'
 import { LineChart } from '../components/Charts'
-import { Calendar, Check, ChevronLeft, Clock, Dumbbell, History, ListChecks, Moon, Play, Plus, Target, TrendingUp, TriangleAlert } from 'lucide-react'
+import { Calendar, Check, ChevronLeft, Clock, Dumbbell, History, ListChecks, Moon, Play, SkipForward, Plus, Target, TrendingUp, TriangleAlert } from 'lucide-react'
 import {
   ExercisePicker, ExerciseThumb, fmtClock, fmtDay, fmtDuration, IconDots, IconDown, IconPlay, IconUp, LargeTitle, MuscleSelect, Row, Section, Sheet,
 } from '../components/ui'
@@ -111,7 +112,9 @@ function TrainHome({ nav, data, goal, open, reload }: {
   const now = useNow(30000)
   const weekStart = startOfWeek(new Date(now))
   const thisWeek = data.workouts.filter(w => new Date(w.started_at) >= weekStart)
-  const up = planNext(data.routines, data.workouts, data.schedule)
+  const [skipsVersion, setSkipsVersion] = useState(0)
+  const skips = useMemo(() => loadSkips(nav.owner), [nav.owner, skipsVersion])
+  const up = planNext(data.routines, data.workouts, data.schedule, skips)
   const next = up?.routine ?? null
   const tips = useMemo(() => insights(data.sets, data.exercises), [data])
 
@@ -186,6 +189,10 @@ function TrainHome({ nav, data, goal, open, reload }: {
             <section className="hero-v2" aria-label={`Up next: ${next.name}`}>
               {up?.restToday && <p className="rest-note"><Moon size={15} strokeWidth={2.2} />Your plan has a rest day today. {next.name} is next, or train anyway if you feel fresh.</p>}
               {up?.doneToday && <p className="rest-note"><Check size={15} strokeWidth={2.6} />You've trained today. This is next in your plan.</p>}
+              {up?.skipped && (
+                <p className="rest-note"><SkipForward size={15} strokeWidth={2.4} />Skipped {up.skipped.name}.
+                  <button className="link-btn" onClick={() => { undoSkip(nav.owner); setSkipsVersion(v => v + 1) }}>Undo</button></p>
+              )}
               <div className="top">
                 <span className="name">{next.name}</span>
                 {st.muscles.length > 0 && <span className="muted" style={{ fontSize: 15 }}>{st.muscles.map(m => MUSCLE_LABEL[m]).join(' · ')}</span>}
@@ -214,6 +221,11 @@ function TrainHome({ nav, data, goal, open, reload }: {
                 <button className="btn btn-primary btn-big" onClick={() => begin(next)} disabled={!st.items.length}>
                   <Play size={18} fill="currentColor" strokeWidth={0} /> {st.items.length ? 'Start workout' : 'Add exercises first'}
                 </button>
+                {up && up.week.length > 0 && (
+                  <button className="btn-text skip-btn" onClick={() => {
+                    addSkip(nav.owner, next.id); setSkipsVersion(v => v + 1); nav.notify(`Skipped ${next.name}`)
+                  }}><SkipForward size={16} strokeWidth={2.4} />Skip {next.name}</button>
+                )}
               </div>
             </section>
           </>

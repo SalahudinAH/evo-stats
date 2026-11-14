@@ -599,3 +599,7 @@ html.ios-short .rest-pill { bottom: 16px; }
 .meal-drop { display: flex; flex-direction: column; gap: 12px; border-radius: 16px; }
 .meal-drop.drop-target .group { box-shadow: 0 0 0 2px var(--accent-text); }
 .drag-ghost { position: fixed; z-index: 70; transform: translate(-50%, -130%); pointer-events: none; display: flex; align-items: center; gap: 6px; max-width: 70vw; padding: 10px 14px; border-radius: 14px; background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 15px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.hero-v2 .cta { display: flex; flex-direction: column; gap: 4px; }
+.skip-btn { align-self: center; display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 15px; padding: 8px 12px; }
+.link-btn { border: 0; background: none; color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer; padding: 0 2px; }
