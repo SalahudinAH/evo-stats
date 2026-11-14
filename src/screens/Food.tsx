@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Pencil, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Minus, Pencil, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react'
 import type { Nav } from '../App'
 import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
 import { useLoad } from '../lib/hooks'
@@ -177,15 +177,15 @@ function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (known) return
     let live = true
     lookupBarcode(code).then(p => {
       if (!live) return
       setProduct(p)
       if (p?.servingGrams) setGrams(String(Math.round(p.servingGrams)))
+      if (known) return // your own copy already has the numbers; we only wanted the serving size
       if (p && p.per100) setState('found')
       else { setForm(f => ({ ...f, name: p ? p.name : '' })); setState('missing') }
-    }, () => live && setState('error'))
+    }, () => { if (live && !known) setState('error') })
     return () => { live = false }
   }, [code, known])
 
@@ -195,6 +195,10 @@ function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
     : { kcal: num(form.kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat) }
   const g = num(grams)
   const f = g / 100
+  const servingG = product?.servingGrams ?? null
+  const servings = servingG ? g / servingG : null
+  const setServings = (n: number) => { if (servingG) setGrams(String(Math.round(Math.max(0, n) * servingG * 10) / 10)) }
+  const fmtServ = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(n * 4 % 1 === 0 ? 2 : 1).replace(/0$/, ''))
   const title = known ? known.name : product ? (product.brand ? `${product.name} (${product.brand})` : product.name) : form.name.trim()
 
   async function add() {
@@ -202,7 +206,7 @@ function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
     setBusy(true)
     try {
       const food = known ?? await api.addFood({ name: title, serving: '100 g', ...per100, barcode: code })
-      await api.addFoodEntry({ ...entryFrom(food, f, meal, offset), serving: `${Math.round(g)} g` })
+      await api.addFoodEntry({ ...entryFrom(food, f, meal, offset), serving: servings && servingG ? `${fmtServ(Math.round(servings * 100) / 100)} × ${Math.round(servingG)} g` : `${Math.round(g)} g` })
       onAdded(title)
     } catch {
       setBusy(false)
@@ -238,11 +242,25 @@ function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
               </div>
             </>
           )}
-          <label>How much did you eat? (grams)
+          {servingG && servings !== null && (
+            <div className="serv-row">
+              <span className="small" style={{ display: 'flex', flexDirection: 'column' }}>
+                <b style={{ fontSize: 16 }}>Servings</b>
+                <span className="muted tiny">1 serving = {Math.round(servingG)} g</span>
+              </span>
+              <div className="wk-stepper serv">
+                <button type="button" aria-label="Half a serving less" onClick={() => setServings(Math.round((servings - 0.5) * 2) / 2)} disabled={servings <= 0.5}><Minus size={20} strokeWidth={2.6} /></button>
+                <input inputMode="decimal" aria-label="Servings" value={fmtServ(Math.round(servings * 100) / 100)}
+                  onFocus={e => e.target.select()} onChange={e => setServings(num(e.target.value))} />
+                <button type="button" aria-label="Half a serving more" onClick={() => setServings(Math.round((servings + 0.5) * 2) / 2)}><Plus size={20} strokeWidth={2.6} /></button>
+              </div>
+            </div>
+          )}
+          <label>{servingG ? 'Or grams' : 'How much did you eat? (grams)'}
             <input inputMode="decimal" value={grams} onChange={e => setGrams(e.target.value)} onFocus={e => e.target.select()} />
           </label>
           <div className="chips">
-            {product?.servingGrams && <button className="chip-btn" onClick={() => setGrams(String(Math.round(product.servingGrams!)))}>1 serving · {Math.round(product.servingGrams)} g</button>}
+            {servingG && [1, 2, 3].map(n => <button key={n} className="chip-btn" onClick={() => setServings(n)}>{n} serving{n > 1 ? 's' : ''} · {Math.round(servingG * n)} g</button>)}
             <button className="chip-btn" onClick={() => setGrams('100')}>100 g</button>
           </div>
           <div className="seg seg-sm" role="group" aria-label="Meal">

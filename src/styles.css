@@ -585,3 +585,8 @@ html.ios-short .rest-pill { bottom: 16px; }
 .plan-week span.pw-rest { background: none; color: var(--muted); font-weight: 500; border: 1px dashed #3a3a3c; }
 .plan-week span.next { background: var(--accent); color: #fff; }
 .rest-note { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 14px; color: var(--text-2); padding: 14px 16px 0; }
+
+.serv-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wk-stepper.serv { grid-template-columns: 48px 72px 48px; gap: 8px; }
+.wk-stepper.serv button, .wk-stepper.serv input { height: 48px; min-height: 48px; }
+.wk-stepper.serv input { font-size: 22px; background: var(--surface-2); }
