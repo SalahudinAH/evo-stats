@@ -6,7 +6,7 @@ import { useLoad } from '../lib/hooks'
 import { kcalFromMacros, planLabel, scaleMacros } from '../lib/nutrition'
 import { IconSearch, LargeTitle, Row, Section, Sheet } from '../components/ui'
 import { BarcodeScanner } from '../components/Scanner'
-import { lookupBarcode, type ScannedProduct } from '../lib/openFoodFacts'
+import { lookupBarcode, searchProducts, TooManySearches, type ScannedProduct } from '../lib/openFoodFacts'
 
 const DAY = 24 * 3600 * 1000
 const MEAL_LABEL: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' }
@@ -65,7 +65,7 @@ export function FoodScreen({ nav }: { nav: Nav }) {
   const dayLabel = offset === 0 ? 'Today' : offset === -1 ? 'Yesterday' : from.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 
   const [scanning, setScanning] = useState(false)
-  const [scanned, setScanned] = useState<string | null>(null)
+  const [scanned, setScanned] = useState<{ code: string; product?: ScannedProduct; meal?: Meal } | null>(null)
   const [entryMenu, setEntryMenu] = useState<FoodEntry | null>(null)
   const pct = (v: number, goal: number | undefined) => `${goal ? Math.min(100, (v / goal) * 100) : 0}%`
 
@@ -137,13 +137,14 @@ export function FoodScreen({ nav }: { nav: Nav }) {
       {adding && foods.data && (
         <AddFood api={nav.api} foods={foods.data} meal={adding} offset={offset} onClose={() => setAdding(null)}
           onScan={() => { setAdding(null); setScanning(true) }}
+          onPickProduct={(product, meal) => { setAdding(null); setScanned({ code: product.barcode, product, meal }) }}
           onAdded={name => { setAdding(null); nav.notify(`${name} added`); reload() }} />
       )}
       {scanning && (
-        <BarcodeScanner onClose={() => setScanning(false)} onCode={code => { setScanning(false); setScanned(code) }} />
+        <BarcodeScanner onClose={() => setScanning(false)} onCode={code => { setScanning(false); setScanned({ code }) }} />
       )}
       {scanned && foods.data && (
-        <ScanResult api={nav.api} foods={foods.data} code={scanned} offset={offset} onClose={() => setScanned(null)}
+        <ScanResult api={nav.api} foods={foods.data} code={scanned.code} initial={scanned.product} initialMeal={scanned.meal} offset={offset} onClose={() => setScanned(null)}
           onRescan={() => { setScanned(null); setScanning(true) }}
           onAdded={name => { setScanned(null); nav.notify(`${name} added`); reload() }} />
       )}
@@ -165,18 +166,20 @@ export function FoodScreen({ nav }: { nav: Nav }) {
 }
 
 /** After a scan: look the barcode up, ask how many grams, add it. */
-function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
-  api: Api; foods: Food[]; code: string; offset: number; onClose: () => void; onAdded: (name: string) => void; onRescan: () => void
+function ScanResult({ api, foods, code, initial, initialMeal, offset, onClose, onAdded, onRescan }: {
+  api: Api; foods: Food[]; code: string; initial?: ScannedProduct; initialMeal?: Meal; offset: number
+  onClose: () => void; onAdded: (name: string) => void; onRescan: () => void
 }) {
   const known = foods.find(f => f.barcode === code) ?? null
-  const [state, setState] = useState<'loading' | 'found' | 'missing' | 'error'>(known ? 'found' : 'loading')
-  const [product, setProduct] = useState<ScannedProduct | null>(null)
-  const [meal, setMeal] = useState<Meal>(mealNow())
-  const [grams, setGrams] = useState('100')
+  const [state, setState] = useState<'loading' | 'found' | 'missing' | 'error'>(known || initial ? 'found' : 'loading')
+  const [product, setProduct] = useState<ScannedProduct | null>(initial ?? null)
+  const [meal, setMeal] = useState<Meal>(initialMeal ?? mealNow())
+  const [grams, setGrams] = useState(initial?.servingGrams ? String(Math.round(initial.servingGrams)) : '100')
   const [form, setForm] = useState({ name: '', kcal: '', protein: '', carbs: '', fat: '' })
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
+    if (initial) return // picked from search: we already have the product
     let live = true
     lookupBarcode(code).then(p => {
       if (!live) return
@@ -187,7 +190,7 @@ function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
       else { setForm(f => ({ ...f, name: p ? p.name : '' })); setState('missing') }
     }, () => { if (live && !known) setState('error') })
     return () => { live = false }
-  }, [code, known])
+  }, [code, known, initial])
 
   const num = (s: string) => { const n = parseFloat(s.replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : 0 }
   const per100 = known ? { kcal: known.kcal, protein: known.protein, carbs: known.carbs, fat: known.fat }
@@ -214,7 +217,7 @@ function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
   }
 
   return (
-    <Sheet title={state === 'missing' ? 'New product' : 'Scanned'} onClose={onClose}>
+    <Sheet title={state === 'missing' ? 'New product' : initial ? 'Add food' : 'Scanned'} onClose={onClose}>
       {state === 'loading' && <p className="muted">Looking up {code}…</p>}
       {state === 'error' && (
         <>
@@ -271,7 +274,7 @@ function ScanResult({ api, foods, code, offset, onClose, onAdded, onRescan }: {
             <span className="small muted">P {round1(per100.protein * f)} g · C {round1(per100.carbs * f)} g · F {round1(per100.fat * f)} g</span>
           </div>
           <button className="btn btn-primary btn-big" onClick={add} disabled={busy || !title || g <= 0 || (state === 'missing' && !form.kcal)}>{busy ? 'Adding…' : 'Add'}</button>
-          <button className="btn-text" style={{ alignSelf: 'center' }} onClick={onRescan}>Scan another</button>
+          {!initial && <button className="btn-text" style={{ alignSelf: 'center' }} onClick={onRescan}>Scan another</button>}
           <p className="tiny muted">Product data: Open Food Facts (openfoodfacts.org).</p>
         </>
       )}
@@ -295,8 +298,9 @@ function entryFrom(f: Pick<Food, 'name' | 'serving' | 'kcal' | 'protein' | 'carb
   } satisfies Omit<FoodEntry, 'id' | 'eaten_at'> & { eaten_at?: string }
 }
 
-function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onScan }: {
+function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onScan, onPickProduct }: {
   api: Api; foods: Food[]; meal: Meal; offset: number; onClose: () => void; onAdded: (name: string) => void; onScan: () => void
+  onPickProduct: (p: ScannedProduct, meal: Meal) => void
 }) {
   const [q, setQ] = useState('')
   const [meal, setMeal] = useState<Meal>(initialMeal)
@@ -308,6 +312,7 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onSc
   const [busy, setBusy] = useState(false)
   const query = q.trim().toLowerCase()
   const results = foods.filter(f => !query || f.name.toLowerCase().includes(query)).slice(0, 30)
+  const off = useOffSearch(query)
   const num = (s: string) => { const n = parseFloat(s.replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : 0 }
   const sv = num(servings)
 
@@ -353,7 +358,7 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onSc
           <div style={{ display: 'flex', gap: 8 }}>
             <div className="search" style={{ flex: 1 }}>
               <IconSearch />
-              <input autoFocus value={q} onChange={e => { setQ(e.target.value); setCreating(false) }} placeholder="Search your foods or type a new one" aria-label="Food name" />
+              <input autoFocus value={q} onChange={e => { setQ(e.target.value); setCreating(false) }} placeholder="Search your foods and Open Food Facts" aria-label="Food name" />
             </div>
             <button className="square-btn" aria-label="Scan a barcode" onClick={onScan}><ScanBarcode size={20} strokeWidth={2} /></button>
           </div>
@@ -386,8 +391,22 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onSc
                 <span className="small" style={{ fontWeight: 650 }}>{f.kcal} kcal</span>
               </button>
             ))}
-            {!results.length && !query && <p className="small muted">Your foods show up here. Type a name to add your first one.</p>}
+            {!results.length && !query && <p className="small muted">Your foods show up here, or type to search Open Food Facts.</p>}
           </div>
+          {query.length >= 3 && (
+            <div className="results" aria-live="polite">
+              <p className="tiny muted" style={{ margin: '6px 2px 0', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>From Open Food Facts</p>
+              {off.status === 'loading' && <p className="small muted">Searching…</p>}
+              {off.status === 'error' && <p className="small muted">{off.message}</p>}
+              {off.status === 'ok' && !off.list.length && <p className="small muted">Nothing found for “{q.trim()}”. Try another word, or scan the barcode.</p>}
+              {off.status === 'ok' && off.list.map(p => (
+                <button key={p.barcode} className="result" onClick={() => onPickProduct(p, meal)}>
+                  <span style={{ minWidth: 0 }}><span style={{ fontWeight: 600 }}>{p.name}</span>{p.brand && <span className="small muted"> · {p.brand}</span>}</span>
+                  <span className="small" style={{ fontWeight: 650, whiteSpace: 'nowrap' }}>{p.per100!.kcal} kcal<span className="muted" style={{ fontWeight: 400 }}>/100 g</span></span>
+                </button>
+              ))}
+            </div>
+          )}
         </>
       )}
     </Sheet>
@@ -443,4 +462,27 @@ export function GoalsSheet({ api, goals, onClose, onSaved, onReplan }: {
       }}>Save</button>
     </Sheet>
   )
+}
+
+type OffSearch = { status: 'idle' } | { status: 'loading' } | { status: 'ok'; list: ScannedProduct[] } | { status: 'error'; message: string }
+
+/** Searches Open Food Facts once you stop typing (they allow about 10 searches a minute). */
+function useOffSearch(query: string): OffSearch {
+  const [state, setState] = useState<OffSearch>({ status: 'idle' })
+  useEffect(() => {
+    if (query.length < 3) { setState({ status: 'idle' }); return }
+    const ctrl = new AbortController()
+    setState({ status: 'loading' })
+    const t = window.setTimeout(() => {
+      searchProducts(query, ctrl.signal).then(
+        list => setState({ status: 'ok', list: list.slice(0, 15) }),
+        e => {
+          if (ctrl.signal.aborted) return
+          setState({ status: 'error', message: e instanceof TooManySearches ? e.message : 'Could not reach Open Food Facts. Check your connection.' })
+        },
+      )
+    }, 700)
+    return () => { window.clearTimeout(t); ctrl.abort() }
+  }, [query])
+  return state
 }
