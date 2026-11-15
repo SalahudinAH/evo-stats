@@ -15,6 +15,7 @@ import { Progress } from './screens/Progress'
 import { More } from './screens/More'
 import { PlanSetup } from './screens/Plan'
 import { useLoad } from './lib/hooks'
+import { useTabSwipe } from './lib/tabSwipe'
 import { Login, NewPassword, NotConfigured } from './screens/Login'
 
 export type Tab = 'today' | 'train' | 'food' | 'progress' | 'more'
@@ -97,6 +98,8 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
   const goals = useLoad(() => api.getGoals(), [api, goalsVersion])
   const weights = useLoad(() => api.listWeights(), [api, goalsVersion])
   const timer = useRef<number>()
+  const mainRef = useRef<HTMLElement>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
 
   const notify = useCallback((m: string, action?: { label: string; run: () => void }) => {
     setToast({ m, action })
@@ -145,6 +148,7 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
   const closePlanner = () => { setPlanning(false); setGoalsVersion(v => v + 1); scrollToTop() }
 
   const inWorkout = workoutOpen && draft && !showPlanner
+  useTabSwipe(mainRef, pageRef, !inWorkout && !showPlanner, tab, go)
   const endWorkout = (savedTab: Tab | null) => {
     setDraft(null)
     setWorkoutOpen(false)
@@ -154,7 +158,7 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
   return (
     <div className="app">
       {api.mode === 'demo' && <div className="demo-banner">Demo data · nothing is saved</div>}
-      <main className={inWorkout || showPlanner ? 'no-tabbar' : undefined}>
+      <main ref={mainRef} className={inWorkout || showPlanner ? 'no-tabbar' : undefined}>
         {showPlanner && (
           <PlanSetup api={api} goals={goals.data!} latestWeight={latestWeight} firstTime={needsSetup}
             onDone={() => { closePlanner(); notify('Daily goals set') }}
@@ -173,11 +177,15 @@ function Shell({ api, owner }: { api: Api; owner: string }) {
             onSaved={() => { endWorkout('train'); notify('Workout saved') }}
             onDiscard={() => { endWorkout(null); notify('Workout discarded') }} />
         )}
-        {!inWorkout && !showPlanner && tab === 'today' && <Today nav={nav} />}
-        {!inWorkout && !showPlanner && tab === 'train' && <Train nav={nav} />}
-        {!inWorkout && !showPlanner && tab === 'food' && <FoodScreen nav={nav} />}
-        {!inWorkout && !showPlanner && tab === 'progress' && <Progress nav={nav} />}
-        {!inWorkout && !showPlanner && tab === 'more' && <More nav={nav} />}
+        {!inWorkout && !showPlanner && (
+          <div ref={pageRef} className="tab-page">
+            {tab === 'today' && <Today nav={nav} />}
+            {tab === 'train' && <Train nav={nav} />}
+            {tab === 'food' && <FoodScreen nav={nav} />}
+            {tab === 'progress' && <Progress nav={nav} />}
+            {tab === 'more' && <More nav={nav} />}
+          </div>
+        )}
       </main>
       {toast && (
         <div className={`toast ${toast.action ? 'has-action' : ''}`} role="status">
