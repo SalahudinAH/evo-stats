@@ -13,6 +13,8 @@ export interface DraftSet {
   done: boolean
   warmup: boolean
   prev: { w: number; r: number } | null
+  /** Logged before and reopened to change it. */
+  editing?: boolean
 }
 
 export interface DraftExercise {

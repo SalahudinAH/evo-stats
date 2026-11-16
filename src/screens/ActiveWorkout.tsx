@@ -69,15 +69,18 @@ export function ActiveWorkout({ nav, draft, setDraft, onMinimise, onDiscard }: {
     const weight = shownWeight(s)
     const reps = shownReps(s, ex)
     if (!validSet({ ...s, weight, reps, done: true })) { nav.notify('Set a weight and reps first'); return }
-    const sets = ex.sets.map(x => (x.key === s.key ? { ...x, weight, reps, done: true } : x))
+    const sets = ex.sets.map(x => (x.key === s.key ? { ...x, weight, reps, done: true, editing: false } : x))
+    // Changing a set you already logged doesn't start the rest timer again.
     setDraft(d => ({
       ...d,
-      restUntil: Date.now() + d.restTotal * 1000,
+      restUntil: s.editing ? d.restUntil : Date.now() + d.restTotal * 1000,
       exercises: d.exercises.map(e => (e.key !== ex.key ? e : { ...e, sets })),
     }))
     setSetKey(null)
-    // Last set of this exercise: move on to the next one that isn't finished.
-    if (sets.every(x => x.done)) {
+    // Finished this exercise: move on to the next one that isn't. When you're only correcting a set
+    // on an exercise you'd already finished, stay put, unless it's the last set.
+    const isLast = s.key === ex.sets[ex.sets.length - 1].key
+    if (sets.every(x => x.done) && (!s.editing || isLast)) {
       const i = draft.exercises.findIndex(e => e.key === ex.key)
       const next = [...draft.exercises.slice(i + 1), ...draft.exercises.slice(0, i)].find(e => e.sets.some(x => !x.done))
       if (next) { nav.notify(`${exName(ex.exercise_id)} done`); openExercise(next.key) }
@@ -188,7 +191,7 @@ export function ActiveWorkout({ nav, draft, setDraft, onMinimise, onDiscard }: {
                 if (!isActive) {
                   return (
                     <button key={s.key} type="button" className={`wk-set ${s.done ? 'done' : ''}`}
-                      onClick={() => { if (s.done) updateSet(ex.key, s.key, { done: false }); setSetKey(s.key) }}
+                      onClick={() => { if (s.done) updateSet(ex.key, s.key, { done: false, editing: true }); setSetKey(s.key) }}
                       aria-label={s.done ? `Set ${label}, logged ${w} kg × ${r}. Tap to change` : `Set ${label}, ${w || '–'} kg × ${r || '–'}`}>
                       <span className="num">{s.done ? <Check size={16} strokeWidth={3} /> : label}</span>
                       <span>{w ? `${w} kg` : '– kg'} × {r || '–'}</span>
