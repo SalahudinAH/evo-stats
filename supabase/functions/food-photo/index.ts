@@ -6,7 +6,8 @@
 // Setup (once):
 //  1. Get a free API key at https://aistudio.google.com/apikey
 //  2. Supabase dashboard › Edge Functions › Secrets › add GEMINI_API_KEY with that key.
-//     (Optional: GEMINI_MODEL to pick a model; default is the newest Flash, "gemini-flash-latest".)
+//     (Optional: GEMINI_MODEL to pick a model; default is the newest Flash, "gemini-flash-latest".
+//     If Google is overloaded it retries once, then tries GEMINI_FALLBACK_MODEL, default "gemini-flash-lite-latest".)
 //  3. Deploy this file as the function "food-photo" with "Verify JWT" on, so only signed-in
 //     users of your app can use it.
 // The key stays on Supabase; it is never sent to the app or stored in GitHub.
@@ -70,6 +71,7 @@ Deno.serve(async req => {
   const key = Deno.env.get('GEMINI_API_KEY')
   if (!key) return reply({ error: 'not_set_up', message: 'Add GEMINI_API_KEY under Edge Functions › Secrets.' }, 501)
   const model = Deno.env.get('GEMINI_MODEL') || 'gemini-flash-latest'
+  const fallback = Deno.env.get('GEMINI_FALLBACK_MODEL') || 'gemini-flash-lite-latest'
 
   let image = '', hint = ''
   try {
@@ -80,21 +82,29 @@ Deno.serve(async req => {
   if (!image || image.length > MAX_BASE64 || !/^[A-Za-z0-9+/=]+$/.test(image)) return reply({ error: 'Send a JPEG photo (base64).' }, 400)
 
   const parts: unknown[] = [{ text: PROMPT + (hint ? `\nThe person adds: "${hint}". Trust this over what you see.` : '') }, { inlineData: { mimeType: 'image/jpeg', data: image } }]
-  let res: Response
-  try {
-    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.2 },
-      }),
-      signal: AbortSignal.timeout(40_000),
-    })
-  } catch {
-    return reply({ error: 'timeout', message: 'The AI took too long. Try again.' }, 504)
+  const ask = (m: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts }],
+      generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.2 },
+    }),
+    signal: AbortSignal.timeout(30_000),
+  })
+  // Google sometimes answers 503 (overloaded) or 429 (free limit for that model). Try the same model
+  // once more after a short pause, then the lighter fallback model, which has its own limit.
+  const attempts = [model, model, fallback].filter((m, i) => i < 2 || m !== model)
+  let res: Response | null = null
+  let used = model
+  for (const [i, m] of attempts.entries()) {
+    if (i > 0) await new Promise(r => setTimeout(r, i === 1 ? 1200 : 300))
+    used = m
+    try { res = await ask(m) } catch { res = null; continue }
+    if (res.ok || ![429, 500, 502, 503, 504].includes(res.status)) break
   }
+  if (!res) return reply({ error: 'timeout', message: 'The AI took too long. Try again.' }, 504)
   if (res.status === 429) return reply({ error: 'busy', message: 'Too many photos right now (free limit). Try again in a minute.' }, 429)
+  if (res.status >= 500 || (used === fallback && res.status === 404)) return reply({ error: 'overloaded', message: 'Google\'s AI is overloaded right now. Try again in a minute.' }, 503)
   if (res.status === 400 || res.status === 403) {
     const detail = await res.text().catch(() => '')
     const badKey = /API key|API_KEY|permission/i.test(detail)
@@ -118,7 +128,7 @@ Deno.serve(async req => {
       sat_fat: i.sat_fat == null ? null : num(i.sat_fat, 500),
       salt: i.salt == null ? null : num(i.salt, 100, 2),
     })).filter((i: { grams: number; kcal: number }) => i.grams > 0 || i.kcal > 0)
-    return reply({ items, note: String(parsed?.note ?? '').slice(0, 200), model })
+    return reply({ items, note: String(parsed?.note ?? '').slice(0, 200), model: used })
   } catch {
     return reply({ error: 'unreadable', message: 'The AI gave an answer the app could not read. Try again.' }, 502)
   }
