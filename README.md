@@ -35,6 +35,7 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
 - Your own food library with serving sizes, plus one-tap adds for the foods you log most
 - Steps from Apple Health (via a Shortcut) and your logged workouts turn into calories burned, which can be added to the day's goal without double-counting the activity already in it
 - Search Open Food Facts by name (products sold in Norway first) and log by servings or grams
+- Photo of a meal: Google Gemini (via the `food-photo` Edge Function) lists each food with grams, calories and macros; adjust the grams and add it all to a meal. Needs a free Gemini API key as a Supabase secret (see More › Settings › Food photos)
 - Scan a barcode with the camera. Nutrition comes from Open Food Facts, you enter the grams, and the calories and macros are worked out from the per-100 g values. Products it doesn't know can be typed in from the label once, and after that a scan is instant
 - Setup on first sign-in: from sex, age, height, weight, goal weight and activity it estimates your maintenance calories (Mifflin–St Jeor), then offers a mild, normal or aggressive cut or a lean bulk or bulk, with the weekly rate and weeks to your goal
 - Daily goals for calories, protein, carbs and fat. Change the calories and the macros scale with them; change a macro and the calories follow

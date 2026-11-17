@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Footprints, GripVertical, Minus, Pencil, Plus, RefreshCw, ScanBarcode, Search, Trash2 } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, Footprints, X, GripVertical, Minus, Pencil, Plus, RefreshCw, ScanBarcode, Search, Trash2 } from 'lucide-react'
 import type { Nav } from '../App'
-import { MEALS, type Api, type Food, type FoodEntry, type Goals, type Meal } from '../lib/types'
+import { MEALS, PhotoNotSetUp, type Api, type Food, type FoodEntry, type Goals, type Meal, type PhotoItem } from '../lib/types'
+import { shrinkPhoto } from '../lib/photo'
 import { useLoad } from '../lib/hooks'
 import { kcalFromMacros, planLabel, scaleMacros } from '../lib/nutrition'
 import { IconSearch, LargeTitle, Row, Section, Sheet, SwipeRow } from '../components/ui'
@@ -67,6 +68,16 @@ export function FoodScreen({ nav }: { nav: Nav }) {
   const dayLabel = offset === 0 ? 'Today' : offset === -1 ? 'Yesterday' : from.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 
   const [scanning, setScanning] = useState(false)
+  const [photo, setPhoto] = useState<{ base64: string; dataUrl: string; meal: Meal } | null>(null)
+  const photoInput = useRef<HTMLInputElement>(null)
+  const photoMeal = useRef<Meal>('breakfast')
+  /** Opens the camera / photo library. Must run straight from a tap. */
+  const takePhoto = (meal: Meal) => { photoMeal.current = meal; photoInput.current?.click() }
+  async function onPhotoPicked(file: File | undefined) {
+    if (!file) return
+    try { setPhoto({ ...(await shrinkPhoto(file)), meal: photoMeal.current }) }
+    catch (e) { nav.notify(e instanceof Error ? e.message : 'Could not open that photo') }
+  }
   const [scanned, setScanned] = useState<{ code: string; product?: ScannedProduct; meal?: Meal } | null>(null)
   const [entryMenu, setEntryMenu] = useState<FoodEntry | null>(null)
   // Press and hold a food, then drag it to another meal (works with touch and mouse).
@@ -177,7 +188,9 @@ export function FoodScreen({ nav }: { nav: Nav }) {
         <button className="searchbar" style={{ border: 0, cursor: 'pointer', textAlign: 'left' }} onClick={() => setAdding(mealNow())}>
           <Search size={18} strokeWidth={2.2} /> <span style={{ fontSize: 17 }}>Search food</span>
         </button>
+        <button className="square-btn" aria-label="Estimate from a photo" onClick={() => takePhoto(mealNow())}><Camera size={20} strokeWidth={2} /></button>
         <button className="square-btn" aria-label="Scan a barcode" onClick={() => setScanning(true)}><ScanBarcode size={20} strokeWidth={2} /></button>
+        <input ref={photoInput} type="file" accept="image/*" hidden onChange={e => { onPhotoPicked(e.target.files?.[0]); e.target.value = '' }} />
       </div>
 
       <section className="hero-v2" aria-label="Calories" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -268,8 +281,14 @@ export function FoodScreen({ nav }: { nav: Nav }) {
       {adding && foods.data && (
         <AddFood api={nav.api} foods={foods.data} meal={adding} offset={offset} onClose={() => setAdding(null)}
           onScan={() => { setAdding(null); setScanning(true) }}
+          onPhoto={meal => { setAdding(null); takePhoto(meal) }}
           onPickProduct={(product, meal) => { setAdding(null); setScanned({ code: product.barcode, product, meal }) }}
           onAdded={name => { setAdding(null); nav.notify(`${name} added`); reload() }} />
+      )}
+      {photo && (
+        <PhotoMeal api={nav.api} photo={photo} meal={photo.meal} offset={offset} onClose={() => setPhoto(null)}
+          onRetake={() => { const m = photo.meal; setPhoto(null); takePhoto(m) }}
+          onAdded={name => { setPhoto(null); nav.notify(`${name} added`); reload() }} />
       )}
       {scanning && (
         <BarcodeScanner onClose={() => setScanning(false)} onCode={code => { setScanning(false); setScanned({ code }) }} />
@@ -412,6 +431,128 @@ function ScanResult({ api, foods, code, initial, initialMeal, offset, onClose, o
   )
 }
 
+type PhotoRow = PhotoItem & { key: number; g: string }
+
+/** A meal photo: the AI lists what it sees with grams and macros; you check it, then add it all. */
+function PhotoMeal({ api, photo, meal: initialMeal, offset, onClose, onAdded, onRetake }: {
+  api: Api; photo: { base64: string; dataUrl: string }; meal: Meal; offset: number
+  onClose: () => void; onAdded: (name: string) => void; onRetake: () => void
+}) {
+  const [meal, setMeal] = useState<Meal>(initialMeal)
+  const [state, setState] = useState<'loading' | 'ready' | 'error' | 'setup'>('loading')
+  const [message, setMessage] = useState('')
+  const [note, setNote] = useState('')
+  const [rows, setRows] = useState<PhotoRow[]>([])
+  const [hint, setHint] = useState('')
+  const [busy, setBusy] = useState(false)
+  const num = (v: string) => { const n = parseFloat(v.replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : 0 }
+
+  async function estimate(h: string) {
+    setState('loading')
+    try {
+      const r = await api.estimatePhoto(photo.base64, h.trim())
+      setRows(r.items.map((it, i) => ({ ...it, key: i, g: String(Math.round(it.grams)) })))
+      setNote(r.note)
+      setState('ready')
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Could not estimate that photo.')
+      setState(e instanceof PhotoNotSetUp ? 'setup' : 'error')
+    }
+  }
+  useEffect(() => { estimate('') }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Changing the grams scales the item's calories and macros with it.
+  const scaled = (r: PhotoRow) => {
+    const f = r.grams > 0 ? num(r.g) / r.grams : 1
+    return { kcal: Math.round(r.kcal * f), protein: round1(r.protein * f), carbs: round1(r.carbs * f), fat: round1(r.fat * f) }
+  }
+  const kept = rows.filter(r => num(r.g) > 0)
+  const total = kept.reduce((t, r) => { const x = scaled(r); return { kcal: t.kcal + x.kcal, protein: t.protein + x.protein, carbs: t.carbs + x.carbs, fat: t.fat + x.fat } }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
+
+  async function add() {
+    if (!kept.length) return
+    setBusy(true)
+    try {
+      for (const r of kept) {
+        await api.addFoodEntry(entryFrom({ name: r.name, serving: `${Math.round(num(r.g))} g`, ...scaled(r) }, 1, meal, offset))
+      }
+      onAdded(kept.length === 1 ? kept[0].name : `${kept.length} items`)
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Could not add it. Try again.')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <Sheet title="From a photo" onClose={onClose} tall>
+      <img className="photo-preview" src={photo.dataUrl} alt="Your meal" />
+
+      {state === 'loading' && <p className="muted" style={{ textAlign: 'center' }}>Looking at your meal…</p>}
+
+      {state === 'setup' && (
+        <div className="card" style={{ gap: 6 }}>
+          <h3>Photo estimates aren't set up yet</h3>
+          <p className="small muted">They need a free Google Gemini key on your Supabase project. See More › Settings › Food photos (AI).</p>
+        </div>
+      )}
+
+      {state === 'error' && (
+        <div className="card" style={{ gap: 10 }}>
+          <p className="small">{message}</p>
+          <button className="btn" onClick={() => estimate(hint)}>Try again</button>
+        </div>
+      )}
+
+      {state === 'ready' && (
+        <>
+          {rows.length === 0 ? <p className="muted">No food found in this photo. Try another angle, or add a hint below.</p> : (
+            <section className="group" aria-label="What the AI found">
+              {rows.map(r => {
+                const x = scaled(r)
+                return (
+                  <div key={r.key} className="group-row photo-row">
+                    <span className="row-text">
+                      <span className="row-title">{r.name}</span>
+                      <span className="row-sub">{x.kcal} kcal · P {x.protein} · C {x.carbs} · F {x.fat}</span>
+                    </span>
+                    <label className="photo-g">
+                      <input inputMode="decimal" aria-label={`Grams of ${r.name}`} value={r.g} onFocus={e => e.target.select()}
+                        onChange={e => setRows(rs => rs.map(y => (y.key === r.key ? { ...y, g: e.target.value.replace(/[^\d.,]/g, '') } : y)))} />
+                      <span>g</span>
+                    </label>
+                    <button className="icon-btn" aria-label={`Remove ${r.name}`} onClick={() => setRows(rs => rs.filter(y => y.key !== r.key))}><X size={18} strokeWidth={2.2} /></button>
+                  </div>
+                )
+              })}
+            </section>
+          )}
+          {note && <p className="tiny muted">{note}</p>}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input style={{ flex: 1 }} value={hint} onChange={e => setHint(e.target.value)} placeholder="Hint, e.g. 2 eggs, fried in butter" aria-label="Hint for the AI"
+              onKeyDown={e => { if (e.key === 'Enter' && hint.trim()) estimate(hint) }} />
+            <button className="btn" style={{ width: 'auto', padding: '0 14px' }} onClick={() => estimate(hint)} disabled={!hint.trim()}>Re-estimate</button>
+          </div>
+
+          <div className="seg seg-sm" role="group" aria-label="Meal">
+            {MEALS.map(m => <button key={m} aria-pressed={meal === m} onClick={() => setMeal(m)}>{MEAL_LABEL[m]}</button>)}
+          </div>
+          <div className="card" style={{ padding: 14, gap: 4 }}>
+            <span style={{ fontSize: 28, fontWeight: 700 }}>{total.kcal} <span className="muted" style={{ fontSize: 15, fontWeight: 400 }}>kcal</span></span>
+            <span className="small muted">P {round1(total.protein)} g · C {round1(total.carbs)} g · F {round1(total.fat)} g</span>
+          </div>
+          {message && state === 'ready' && <p className="error">{message}</p>}
+          <button className="btn btn-primary btn-big" onClick={add} disabled={busy || !kept.length}>
+            {busy ? 'Adding…' : `Add to ${MEAL_LABEL[meal].toLowerCase()}`}
+          </button>
+        </>
+      )}
+
+      <button className="btn-text" style={{ alignSelf: 'center' }} onClick={onRetake}>Take another photo</button>
+      <p className="tiny muted">An AI estimate, often 20–30 % off: check the grams. The photo is sent to Google Gemini and not stored by the app.</p>
+    </Sheet>
+  )
+}
+
 function entryFrom(f: Pick<Food, 'name' | 'serving' | 'kcal' | 'protein' | 'carbs' | 'fat'> & { id?: string }, servings: number, meal: Meal, offset: number) {
   // Logging for an earlier day puts the entry at noon that day.
   const eaten_at = offset === 0 ? undefined : (() => { const d = dayRange(offset).from; d.setHours(12); return d.toISOString() })()
@@ -428,8 +569,9 @@ function entryFrom(f: Pick<Food, 'name' | 'serving' | 'kcal' | 'protein' | 'carb
   } satisfies Omit<FoodEntry, 'id' | 'eaten_at'> & { eaten_at?: string }
 }
 
-function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onScan, onPickProduct }: {
+function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onScan, onPhoto, onPickProduct }: {
   api: Api; foods: Food[]; meal: Meal; offset: number; onClose: () => void; onAdded: (name: string) => void; onScan: () => void
+  onPhoto: (meal: Meal) => void
   onPickProduct: (p: ScannedProduct, meal: Meal) => void
 }) {
   const [q, setQ] = useState('')
@@ -490,6 +632,7 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onSc
               <IconSearch />
               <input autoFocus value={q} onChange={e => { setQ(e.target.value); setCreating(false) }} placeholder="Search your foods and Open Food Facts" aria-label="Food name" />
             </div>
+            <button className="square-btn" aria-label="Estimate from a photo" onClick={() => onPhoto(meal)}><Camera size={20} strokeWidth={2} /></button>
             <button className="square-btn" aria-label="Scan a barcode" onClick={onScan}><ScanBarcode size={20} strokeWidth={2} /></button>
           </div>
           {query && !foods.some(f => f.name.toLowerCase() === query) && !creating && (

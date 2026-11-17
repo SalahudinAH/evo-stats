@@ -246,6 +246,16 @@ export function createDemoApi(): Api {
     async rotateShortcutKey() { shortcutKey = crypto.randomUUID(); return shortcutKey },
 
     async signOut() { window.location.search = '' },
+    async estimatePhoto(_image, hint) {
+      await new Promise(r => setTimeout(r, 1200))
+      const items = [
+        { name: 'Grilled chicken breast', grams: 160, kcal: 264, protein: 49.6, carbs: 0, fat: 5.8 },
+        { name: 'White rice', grams: 200, kcal: 260, protein: 5.4, carbs: 56.4, fat: 0.6 },
+        { name: 'Broccoli', grams: 90, kcal: 31, protein: 2.5, carbs: 6, fat: 0.3 },
+        { name: 'Olive oil (cooking)', grams: 8, kcal: 71, protein: 0, carbs: 0, fat: 8 },
+      ]
+      return { items, note: hint ? 'Used your hint for the portions.' : 'Rice portion is hard to judge from above.' }
+    },
     async centreBusyness(visitsId) {
       await wait()
       // A believable evening at the gym, different per centre.

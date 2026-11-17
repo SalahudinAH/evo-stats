@@ -5,6 +5,7 @@ import type { Api } from '../lib/types'
 import { useLoad } from '../lib/hooks'
 import { SUPABASE_KEY, SUPABASE_URL, supabase } from '../lib/supabaseApi'
 import evoVisitsFunction from '../../supabase/functions/evo-visits/index.ts?raw'
+import foodPhotoFunction from '../../supabase/functions/food-photo/index.ts?raw'
 
 function Copy({ label, value, secret = false, preview }: { label: string; value: string; secret?: boolean; preview?: string }) {
   const [done, setDone] = useState(false)
@@ -138,6 +139,18 @@ p_active_kcal  [Sum of active energy]  (Number, optional)`}</pre>
         </ol>
         <Copy label="Function code" value={evoVisitsFunction} preview="supabase/functions/evo-visits/index.ts" />
         <p className="muted small">No keys or secrets needed. After that, your main centre on Today and every centre in More › EVO centres show live numbers.</p>
+      </section>
+
+      <section className="card guide" id="food-photos">
+        <h2>7. Food photos (AI)</h2>
+        <p className="muted small">Take a photo of a meal (the camera button on Food) and Google Gemini estimates each food with grams, calories and macros. You check it before anything is logged. It needs a free Gemini API key, which stays in your Supabase project:</p>
+        <ol>
+          <li>Go to <b>aistudio.google.com/apikey</b>, sign in with Google and press <b>Create API key</b>. Copy it.</li>
+          <li>In your Supabase project: <b>Edge Functions</b> › <b>Secrets</b> › add a secret named <code>GEMINI_API_KEY</code> with the key as its value, and save.</li>
+          <li>If the <code>food-photo</code> function isn't there yet: <b>Deploy a new function</b> › <b>Via Editor</b>, name it <code>food-photo</code>, paste the code below and <b>Deploy</b> with <b>Verify JWT</b> on.</li>
+        </ol>
+        <Copy label="Function code" value={foodPhotoFunction} preview="supabase/functions/food-photo/index.ts" />
+        <p className="muted small">The free tier allows a handful of photos a minute, plenty for logging meals. On the free tier Google may use what you send to improve its models.</p>
       </section>
 
       <section className="card">

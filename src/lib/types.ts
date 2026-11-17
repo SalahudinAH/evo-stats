@@ -215,4 +215,12 @@ export interface Api {
 
   /** Live crowd numbers for an EVO centre (via the evo-visits Edge Function). */
   centreBusyness(visitsId: string): Promise<Busyness>
+
+  /** AI estimate of the foods in a meal photo (via the food-photo Edge Function). */
+  estimatePhoto(jpegBase64: string, hint: string): Promise<PhotoEstimate>
 }
+
+export interface PhotoItem { name: string; grams: number; kcal: number; protein: number; carbs: number; fat: number }
+export interface PhotoEstimate { items: PhotoItem[]; note: string }
+/** The food-photo function or its Gemini key isn't set up yet. */
+export class PhotoNotSetUp extends Error {}

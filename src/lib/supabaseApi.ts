@@ -1,8 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { BusynessNotSetUp, DEFAULT_GOALS } from './types'
+import { BusynessNotSetUp, DEFAULT_GOALS, PhotoNotSetUp } from './types'
 import type {
   Busyness,
   DailyActivity,
+  PhotoEstimate,
   Schedule,
   Api, CheckInResult, Club, Exercise, Food, FoodEntry, Goals, Routine, RoutineExercise, Visit, Weight, Workout, WorkoutSet,
 } from './types'
@@ -279,6 +280,19 @@ export function createSupabaseApi(): Api {
         throw new Error('Could not get live numbers from EVO right now.')
       }
       return data as Busyness
+    },
+    async estimatePhoto(image, hint) {
+      const { data, error } = await db.functions.invoke('food-photo', { body: { image, hint } })
+      if (error) {
+        const res = (error as { context?: Response }).context
+        const status = res?.status
+        let message = ''
+        try { message = (await res?.json())?.message ?? '' } catch { /* not JSON */ }
+        if (status === 404 || status === 501) throw new PhotoNotSetUp(message || 'Photo estimates are not set up yet.')
+        if (error.name === 'FunctionsFetchError') throw new Error('No connection. Try again.')
+        throw new Error(message || 'Could not estimate that photo. Try again.')
+      }
+      return data as PhotoEstimate
     },
     async deleteAccount() {
       check(await db.rpc('delete_my_account'))
