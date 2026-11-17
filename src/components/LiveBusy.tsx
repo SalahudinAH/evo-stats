@@ -68,8 +68,7 @@ export function LiveBusy({ state }: { state: State }) {
   if (state.status === 'loading') return <div className="card busy-card"><span className="small muted">Checking how busy it is…</span></div>
   if (state.status === 'setup') return (
     <div className="card busy-card">
-      <span className="small" style={{ fontWeight: 600 }}>Live busyness isn't switched on yet</span>
-      <span className="tiny muted">It needs a one-time setup in Supabase. See More › Settings & Shortcuts › 6. Live busyness.</span>
+      <span className="small muted">Live numbers aren't available right now.</span>
     </div>
   )
   if (state.status === 'error') return <div className="card busy-card"><span className="small muted">{state.message}</span></div>
@@ -89,7 +88,7 @@ export function LiveBusy({ state }: { state: State }) {
       </div>
       <div className="kbar" style={{ height: 6 }}><div style={{ width: `${Math.min(100, data.percent)}%`, background: l.color }} /></div>
       <BusyDay data={data} />
-      <span className="tiny muted">Live from EVO Visits · updated {new Date(data.fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+      <span className="tiny muted">Live · updated {new Date(data.fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
     </div>
   )
 }

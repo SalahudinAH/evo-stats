@@ -1,6 +1,6 @@
 # EVO Stats
 
-A personal gym companion for the iPhone: gym visits, workouts with progressive overload, calories and body weight in one app. It's a web app you add to your home screen, and iPhone Shortcuts check you in automatically when you arrive at the gym.
+A personal gym companion for the iPhone: gym visits, workouts, food and body weight in one app. Add it to your home screen, and it checks you in automatically when you arrive at EVO.
 
 <p align="center">
   <img src="docs/screenshots/today.png" width="200" alt="Today: check-in, calories left and today's workout">
@@ -13,110 +13,62 @@ A personal gym companion for the iPhone: gym visits, workouts with progressive o
   <img src="docs/screenshots/progress.png" width="200" alt="Progress: a body map shaded by weekly sets per muscle">
 </p>
 
-## Features
+## What it does
 
 **Today**
-- Checked in or not, plus visits in the last 30 days, 6 months and 12 months, and your week streak
-- Calories left with protein, carbs and fat
-- Today's workout, or the next one in your plan with a Begin button
-- Body weight trend and gym days this week
+- Whether you've been to the gym today, your visits this month and year, and your week streak
+- Calories left, with protein, carbs and fat
+- Today's workout from your weekly plan, or a rest day
+- Your main EVO centre: open or closed, and how busy it is right now
 
 **Train**
-- A plan made of routines (for example Push / Pull / Legs), each with targets like 4 × 6–8
-- **Begin** a routine. Every set shows what you lifted last time, with the suggested weight already filled in
-- Tick sets as you go. A rest timer starts on each tick. You can mark warm-up sets, add or remove sets and exercises, and minimise the workout
-- **Finish** to compare with the last time you did that routine: volume, reps, time, each exercise up or down, and new personal records
-- A plan for next time, for example "Hit 8 reps on every set, then go up to 62.5 kg"
-- The workout in progress is kept on the phone until you save it, so closing the app or losing signal at the gym loses nothing
-- An exercise library of about 750 exercises with photos. Search, filter by muscle, pick several at once, or create your own
+- A weekly plan, with Push / Pull / Legs ready to use. If you miss a day, the plan picks up where you left off, and every Monday starts a new week. You can skip a workout too
+- Log one set at a time. Each set is filled in from last time, with a suggested weight when it's time to go up
+- A rest timer between sets, and the workout is kept on your phone until you save it, so nothing is lost if you close the app
+- When you finish: how it compared with last time, new personal records, and what to aim for next time
+- About 750 exercises with photos, or add your own
 
 **Food**
-- Calories and macros per meal: breakfast, lunch, dinner and snacks
-- Your own food library with serving sizes, plus one-tap adds for the foods you log most
-- Steps from Apple Health (via a Shortcut) and your logged workouts turn into calories burned, which can be added to the day's goal without double-counting the activity already in it
-- Search Open Food Facts by name (products sold in Norway first) and log by servings or grams
-- Photo of a meal: Google Gemini (via the `food-photo` Edge Function) lists each food with grams, calories and macros; adjust the grams and add it all to a meal. Needs a free Gemini API key as a Supabase secret (see More › Settings › Food photos)
-- Scan a barcode with the camera. Nutrition comes from Open Food Facts, you enter the grams, and the calories and macros are worked out from the per-100 g values. Products it doesn't know can be typed in from the label once, and after that a scan is instant
-- Setup on first sign-in: from sex, age, height, weight, goal weight and activity it estimates your maintenance calories (Mifflin–St Jeor), then offers a mild, normal or aggressive cut or a lean bulk or bulk, with the weekly rate and weeks to your goal
-- Daily goals for calories, protein, carbs and fat. Change the calories and the macros scale with them; change a macro and the calories follow
+- Calories and macros per meal. Swipe a food left to delete it, or press and hold to move it to another meal
+- Search products (Norwegian first), scan a barcode, or take a photo of your plate and let AI estimate each food. You check the grams before anything is added
+- Show more nutrients: fibre, sugar, saturated fat and salt
+- Steps from Apple Health can add the calories you burn to the day's goal
+- First-time setup works out your calories from your body stats and goal (cut, maintain or bulk)
 
 **Progress**
-- A front and back body map shaded by your weekly working sets per muscle. Tap a muscle to focus on it
-- Weekly working sets per muscle compared with a target
-- What to work on: lagging muscles and lifts that have stalled
-- Estimated 1-rep max trend for your main lifts, body weight, and visits per week
+- A body map shaded by how much you train each muscle every week
+- Lifts that have stalled and muscles that need more work
+- Strength, body weight and gym visits over time
 
-**EVO centres**
-- All 92 EVO centres in Norway, nearest first when location is on, with search
-- Live busyness from EVO Visits: how many are training right now, how full it is, and how busy each part of the day is and is expected to be
-- Your main centre with its live numbers on Today
-- Links to Google Maps, directions and EVO's page, plus your own usual training hours there
-- Save a centre as your club for automatic check-ins
+**More**
+- All 92 EVO centres in Norway, nearest first, with live and hourly busyness
+- Visit history, weight log and goals
+- Shortcuts guides: check in automatically when you arrive at the gym, and sync weight and steps from Apple Health
 
-**Automatic check-ins**
-- An iPhone Shortcuts location automation (a geofence around your centre) logs a visit when you arrive
-- A daily Shortcut syncs your weight from Apple Health
-- Visits within 3 hours count once, so several triggers never double-count
-
-**Accounts**
-- Create an account, reset a forgotten password, choose whether to stay signed in, and delete your account with all its data
+Swipe left and right to move between tabs. New versions install by themselves the next time you open the app.
 
 ## How progression works
 
 - **Double progression.** Stay at a weight until every set reaches the top of the rep range, then go up: 2.5 kg on barbells, 2 kg in the dumbbell range, 1 kg under 10 kg.
-- **Stalled lifts.** If neither of your last two sessions beat the one before (no more weight, no better estimated 1-rep max, no extra reps at the same weight), the app suggests dropping about 10% and building back up.
-- **Estimated 1-rep max.** Uses the Epley formula, so 5 × 100 kg and 8 × 90 kg can be compared on one scale.
-- **Weekly sets per muscle.** Each exercise has a main muscle. Working sets (not warm-ups) are averaged per week and compared with a target.
+- **Stalled lifts.** If neither of your last two sessions beat the one before, the app suggests dropping about 10% and building back up.
+- **Estimated 1-rep max.** The Epley formula, so 5 × 100 kg and 8 × 90 kg can be compared.
+- **Weekly sets per muscle.** Working sets (not warm-ups) per week, compared with a target.
 
-## Tech stack
+## How it's built
 
-- **Frontend:** React 18, TypeScript, Vite, Lucide icons. Charts are hand-written SVG, with no chart library.
-- **Barcode scanning:** the browser's BarcodeDetector where it exists, otherwise ZXing compiled to WebAssembly (`barcode-detector`), with the WebAssembly file served from this site
-- **Live busyness:** a Supabase Edge Function (`supabase/functions/evo-visits`) relays EVO's public EVO Visits numbers, since EVO's API only allows its own site
-- **Body map:** `react-muscle-highlighter`, loaded only when you open Progress
-- **Backend:** Supabase (Postgres, Auth, Row Level Security, RPC functions)
-- **Hosting:** GitHub Pages, deployed by GitHub Actions on every push to `main`
-- **Automation:** iPhone Shortcuts calling token-protected database functions
+- **App:** React, TypeScript and Vite, added to the iPhone home screen and hosted on GitHub Pages
+- **Data and sign-in:** Supabase (Postgres with row-level security, so you only ever see your own data)
+- **Server functions:** live centre busyness and the food photo estimates run as Supabase Edge Functions, so no keys are in the app
+- **iPhone Shortcuts:** log visits, weight and steps with a personal key you can replace at any time
 
-```
-iPhone Shortcuts ── log_visit / log_weight (personal key) ──┐
-                                                            ▼
-Home-screen web app ── signed in, Row Level Security ──► Postgres (Supabase)
-  (GitHub Pages)                                            ▲
-GitHub Action ── keep-alive ping every 3 days ──────────────┘
-```
-
-## Security
-
-- Every table has Row Level Security: you only ever read or change your own rows.
-- Extra restrictive policies stop anyone from linking their data to another user's exercises, routines, workouts or foods.
-- A workout and its sets are saved in one transaction (`save_workout`).
-- Shortcuts don't sign in. They call two narrow functions that require a personal key, which you can rotate in Settings.
-- Deleting an account removes the login and, through cascading deletes, all of that user's data.
-
-## Project structure
-
-```
-src/
-  screens/      Today, Train, ActiveWorkout, WorkoutSummary, Food, Progress, More, Clubs, Weight, Settings, Login
-  components/   Charts and shared UI (sheets, pickers, rings, sparklines)
-  lib/
-    training.ts   progression tips, stall detection, comparisons, PRs, muscle volume
-    draft.ts      the workout in progress, kept in localStorage
-    stats.ts      visit counts, streaks, e1RM
-    supabaseApi.ts / demoApi.ts   the real backend and an in-memory demo
-supabase/schema.sql   tables, security policies and database functions
-.github/workflows/    deploy to Pages, database keep-alive
-```
-
-## Run it locally
+## Try it
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173/?demo` to try the app with eight weeks of sample data. Demo mode needs no backend, and nothing in it is saved.
+Open `http://localhost:5173/?demo` to try it with sample data. Nothing in the demo is saved.
 
 ---
 
@@ -127,5 +79,6 @@ Personal project. Not affiliated with or endorsed by EVO Fitness.
 - EVO centre list and coordinates: [evofitness.no](https://evofitness.no/sentre/)
 - Exercise names and photos: [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas, public domain (The Unlicense)
 - Live centre numbers: [EVO Visits](https://visits.evofitness.no/)
+- Food photo estimates: Google Gemini
 - Food data: [Open Food Facts](https://world.openfoodfacts.org), under the Open Database License
 - Body map: [react-muscle-highlighter](https://github.com/soroojshehryar/react-muscle-highlighter), MIT

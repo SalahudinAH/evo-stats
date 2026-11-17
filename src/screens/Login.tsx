@@ -143,7 +143,7 @@ export function Login({ initialError = null }: { initialError?: string | null })
         )}
         {mode === 'signup' && (
           <p className="tiny muted">
-            You can delete your account and all your data any time in More › Settings.
+            You can delete your account and all your data any time in More.
           </p>
         )}
       </form>

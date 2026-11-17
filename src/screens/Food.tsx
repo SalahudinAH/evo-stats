@@ -426,7 +426,6 @@ function ScanResult({ api, foods, code, initial, initialMeal, offset, onClose, o
           </div>
           <button className="btn btn-primary btn-big" onClick={add} disabled={busy || !title || g <= 0 || (state === 'missing' && !form.kcal)}>{busy ? 'Adding…' : 'Add'}</button>
           {!initial && <button className="btn-text" style={{ alignSelf: 'center' }} onClick={onRescan}>Scan another</button>}
-          <p className="tiny muted">Product data: Open Food Facts (openfoodfacts.org).</p>
         </>
       )}
     </Sheet>
@@ -536,8 +535,8 @@ function PhotoMeal({ api, photo, meal: initialMeal, offset, onClose, onAdded, on
 
       {state === 'setup' && (
         <div className="card" style={{ gap: 6 }}>
-          <h3>Photo estimates aren't set up yet</h3>
-          <p className="small muted">They need a free Google Gemini key on your Supabase project. See More › Settings › Food photos (AI).</p>
+          <h3>Photo estimates aren't available right now</h3>
+          <p className="small muted">Try again later, or search for the food instead.</p>
         </div>
       )}
 
@@ -594,7 +593,7 @@ function PhotoMeal({ api, photo, meal: initialMeal, offset, onClose, onAdded, on
       )}
 
       <button className="btn-text" style={{ alignSelf: 'center' }} onClick={onRetake}>Take another photo</button>
-      <p className="tiny muted">An AI estimate, often 20–30 % off: check the grams. The photo is sent to Google Gemini and not stored by the app.</p>
+      <p className="tiny muted">An estimate, often 20–30 % off. Check the grams before you add it.</p>
     </Sheet>
   )
 }
@@ -677,7 +676,7 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onSc
           <div style={{ display: 'flex', gap: 8 }}>
             <div className="search" style={{ flex: 1 }}>
               <IconSearch />
-              <input autoFocus value={q} onChange={e => { setQ(e.target.value); setCreating(false) }} placeholder="Search your foods and Open Food Facts" aria-label="Food name" />
+              <input autoFocus value={q} onChange={e => { setQ(e.target.value); setCreating(false) }} placeholder="Search food" aria-label="Food name" />
             </div>
             <button className="square-btn" aria-label="Estimate from a photo" onClick={() => onPhoto(meal)}><Camera size={20} strokeWidth={2} /></button>
             <button className="square-btn" aria-label="Scan a barcode" onClick={onScan}><ScanBarcode size={20} strokeWidth={2} /></button>
@@ -711,11 +710,11 @@ function AddFood({ api, foods, meal: initialMeal, offset, onClose, onAdded, onSc
                 <span className="small" style={{ fontWeight: 650 }}>{f.kcal} kcal</span>
               </button>
             ))}
-            {!results.length && !query && <p className="small muted">Your foods show up here, or type to search Open Food Facts.</p>}
+            {!results.length && !query && <p className="small muted">Your foods show up here. Type to search, or scan a barcode.</p>}
           </div>
           {query.length >= 3 && (
             <div className="results" aria-live="polite">
-              <p className="tiny muted" style={{ margin: '6px 2px 0', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>From Open Food Facts</p>
+              <p className="tiny muted" style={{ margin: '6px 2px 0', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>More products</p>
               {off.status === 'loading' && <p className="small muted">Searching…</p>}
               {off.status === 'error' && <p className="small muted">{off.message}</p>}
               {off.status === 'ok' && !off.list.length && <p className="small muted">Nothing found for “{q.trim()}”. Try another word, or scan the barcode.</p>}
@@ -813,7 +812,7 @@ function useOffSearch(query: string): OffSearch {
         list => setState({ status: 'ok', list: list.slice(0, 15) }),
         e => {
           if (ctrl.signal.aborted) return
-          setState({ status: 'error', message: e instanceof TooManySearches ? e.message : 'Could not reach Open Food Facts. Check your connection.' })
+          setState({ status: 'error', message: e instanceof TooManySearches ? e.message : 'Search isn\'t working right now. Check your connection.' })
         },
       )
     }, 700)

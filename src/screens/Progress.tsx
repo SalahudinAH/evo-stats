@@ -113,7 +113,7 @@ export function Progress({ nav }: { nav: Nav }) {
           {w.length > 0 && <p className="small muted">{w[w.length - 1].kg.toFixed(1)} kg now{w.length > 1 ? ` · ${(w[w.length - 1].kg - w[0].kg >= 0 ? '+' : '')}${(w[w.length - 1].kg - w[0].kg).toFixed(1)} kg, ${rangeText}` : ''}</p>}
           {w.length >= 2
             ? <LineChart points={w.map(x => ({ x: new Date(x.measured_at), y: x.kg }))} unit="kg" decimals={0} height={150} />
-            : <p className="muted small">Log your weight a couple of times, or set up the daily Health sync in More › Settings.</p>}
+            : <p className="muted small">Log your weight a couple of times, or sync it from Apple Health (More › Shortcuts).</p>}
         </div>
       </Section>
 

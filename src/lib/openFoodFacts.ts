@@ -81,7 +81,7 @@ export async function searchProducts(query: string, signal?: AbortSignal): Promi
     const params = new URLSearchParams({ search_terms: q, search_simple: '1', action: 'process', json: '1', page_size: '24', fields: FIELDS })
     if (norway) { params.set('tagtype_0', 'countries'); params.set('tag_contains_0', 'contains'); params.set('tag_0', 'norway') }
     const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params}`, { signal })
-    if (res.status === 429 || res.status === 503) throw new TooManySearches('Open Food Facts is busy. Try again in a minute.')
+    if (res.status === 429 || res.status === 503) throw new TooManySearches('Search is busy. Try again in a minute.')
     if (!res.ok) throw new Error(`Search failed (${res.status})`)
     const data = await res.json() as { products?: Record<string, unknown>[] }
     return (data.products ?? [])

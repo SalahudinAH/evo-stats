@@ -211,7 +211,7 @@ export function createSupabaseApi(): Api {
       const { data } = await db.auth.getSession()
       if (!data.session) throw new Error('Not signed in')
       const res = await db.from('user_settings').upsert({ user_id: data.session.user.id, add_burned: on })
-      if (res.error && ['42703', 'PGRST204'].includes(res.error.code)) throw new Error('Run the latest supabase/schema.sql first (adds the add_burned setting).')
+      if (res.error && ['42703', 'PGRST204'].includes(res.error.code)) throw new Error('Could not save this setting right now.')
       check(res)
     },
 
