@@ -112,12 +112,12 @@ export function createDemoApi(): Api {
 
   // ---- Food ---------------------------------------------------------------
   const foods: Food[] = [
-    { id: id(), name: 'Oatmeal with banana', serving: '80 g oats', kcal: 380, protein: 12, carbs: 66, fat: 8 },
-    { id: id(), name: 'Skyr, natural', serving: '200 g', kcal: 140, protein: 22, carbs: 8, fat: 0 },
-    { id: id(), name: 'Chicken & rice bowl', serving: '1 bowl', kcal: 640, protein: 48, carbs: 75, fat: 14 },
-    { id: id(), name: 'Protein shake', serving: '1 scoop + milk', kcal: 180, protein: 25, carbs: 9, fat: 4 },
+    { id: id(), name: 'Oatmeal with banana', serving: '80 g oats', kcal: 380, protein: 12, carbs: 66, fat: 8, fiber: 9.5, sugar: 15, sat_fat: 1.5, salt: 0 },
+    { id: id(), name: 'Skyr, natural', serving: '200 g', kcal: 140, protein: 22, carbs: 8, fat: 0, fiber: 0, sugar: 8, sat_fat: 0.2, salt: 0.2 },
+    { id: id(), name: 'Chicken & rice bowl', serving: '1 bowl', kcal: 640, protein: 48, carbs: 75, fat: 14, fiber: 4, sugar: 3, sat_fat: 3.5, salt: 1.8 },
+    { id: id(), name: 'Protein shake', serving: '1 scoop + milk', kcal: 180, protein: 25, carbs: 9, fat: 4, fiber: 0.5, sugar: 8, sat_fat: 2.4, salt: 0.4 },
     { id: id(), name: 'Bread with cheese', serving: '2 slices', kcal: 300, protein: 21, carbs: 12, fat: 26 },
-    { id: id(), name: 'Banana', serving: '1 medium', kcal: 105, protein: 1, carbs: 27, fat: 0 },
+    { id: id(), name: 'Banana', serving: '1 medium', kcal: 105, protein: 1, carbs: 27, fat: 0, fiber: 3.1, sugar: 14, sat_fat: 0.1, salt: 0 },
   ]
   const entries: FoodEntry[] = []
   const eat = (daysAgo: number, hour: number, meal: FoodEntry['meal'], f: Food) => {
@@ -249,10 +249,10 @@ export function createDemoApi(): Api {
     async estimatePhoto(_image, hint) {
       await new Promise(r => setTimeout(r, 1200))
       const items = [
-        { name: 'Grilled chicken breast', grams: 160, kcal: 264, protein: 49.6, carbs: 0, fat: 5.8 },
-        { name: 'White rice', grams: 200, kcal: 260, protein: 5.4, carbs: 56.4, fat: 0.6 },
-        { name: 'Broccoli', grams: 90, kcal: 31, protein: 2.5, carbs: 6, fat: 0.3 },
-        { name: 'Olive oil (cooking)', grams: 8, kcal: 71, protein: 0, carbs: 0, fat: 8 },
+        { name: 'Grilled chicken breast', grams: 160, kcal: 264, protein: 49.6, carbs: 0, fat: 5.8, fiber: 0, sugar: 0, sat_fat: 1.6, salt: 0.6 },
+        { name: 'White rice', grams: 200, kcal: 260, protein: 5.4, carbs: 56.4, fat: 0.6, fiber: 0.8, sugar: 0.1, sat_fat: 0.2, salt: 0 },
+        { name: 'Broccoli', grams: 90, kcal: 31, protein: 2.5, carbs: 6, fat: 0.3, fiber: 2.4, sugar: 1.5, sat_fat: 0, salt: 0.1 },
+        { name: 'Olive oil (cooking)', grams: 8, kcal: 71, protein: 0, carbs: 0, fat: 8, fiber: 0, sugar: 0, sat_fat: 1.1, salt: 0 },
       ]
       return { items, note: hint ? 'Used your hint for the portions.' : 'Rice portion is hard to judge from above.' }
     },

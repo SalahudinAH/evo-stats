@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { BusynessNotSetUp, DEFAULT_GOALS, PhotoNotSetUp } from './types'
+import { BusynessNotSetUp, DEFAULT_GOALS, NUTRIENT_KEYS, PhotoNotSetUp, type Nutrients } from './types'
 import type {
   Busyness,
   DailyActivity,
@@ -10,8 +10,21 @@ import type {
 
 /** Postgres numeric columns arrive as strings. */
 function numMacros<T extends { kcal: number; protein: number; carbs: number; fat: number }>(r: T): T {
-  return { ...r, kcal: Number(r.kcal), protein: Number(r.protein), carbs: Number(r.carbs), fat: Number(r.fat) }
+  const out: T = { ...r, kcal: Number(r.kcal), protein: Number(r.protein), carbs: Number(r.carbs), fat: Number(r.fat) }
+  for (const k of NUTRIENT_KEYS) {
+    const v = (r as Nutrients)[k]
+    if (v !== undefined) (out as Nutrients)[k] = v === null ? null : Number(v)
+  }
+  return out
 }
+
+/** Before the nutrient columns exist (schema.sql not re-run yet), save without them. */
+function withoutNutrients<T extends object>(row: T): T {
+  const copy = { ...row } as Record<string, unknown>
+  for (const k of NUTRIENT_KEYS) delete copy[k]
+  return copy as T
+}
+const missingColumn = (code?: string) => code === '42703' || code === 'PGRST204'
 
 /**
  * Keep only "https://<project>.supabase.co". People often paste the API URL
@@ -227,16 +240,24 @@ export function createSupabaseApi(): Api {
       return rows.map(numMacros)
     },
     async addFood(f) {
-      return numMacros(check(await db.from('foods').insert(f.barcode ? f : { ...f, barcode: undefined }).select('*').single()) as Food)
+      const row = f.barcode ? f : { ...f, barcode: undefined }
+      let res = await db.from('foods').insert(row).select('*').single()
+      if (missingColumn(res.error?.code)) res = await db.from('foods').insert(withoutNutrients(row)).select('*').single()
+      return numMacros(check(res) as Food)
     },
     async deleteFood(id) { check(await db.from('foods').delete().eq('id', id)) },
     async listFoodEntries(fromIso, toIso) {
-      const rows = check(await db.from('food_entries')
-        .select('id, eaten_at, meal, food_id, name, serving, kcal, protein, carbs, fat')
-        .gte('eaten_at', fromIso).lt('eaten_at', toIso).order('eaten_at')) as FoodEntry[]
-      return rows.map(numMacros)
+      const cols = 'id, eaten_at, meal, food_id, name, serving, kcal, protein, carbs, fat'
+      const query = (c: string) => db.from('food_entries').select(c).gte('eaten_at', fromIso).lt('eaten_at', toIso).order('eaten_at')
+      let res = await query(`${cols}, fiber, sugar, sat_fat, salt`)
+      if (missingColumn(res.error?.code)) res = await query(cols)
+      return (check(res) as unknown as FoodEntry[]).map(numMacros)
     },
-    async addFoodEntry(e) { check(await db.from('food_entries').insert(e)) },
+    async addFoodEntry(e) {
+      const res = await db.from('food_entries').insert(e)
+      if (missingColumn(res.error?.code)) { check(await db.from('food_entries').insert(withoutNutrients(e))); return }
+      check(res)
+    },
     async deleteFoodEntry(id) { check(await db.from('food_entries').delete().eq('id', id)) },
     async moveFoodEntry(id, meal) { check(await db.from('food_entries').update({ meal }).eq('id', id)) },
 

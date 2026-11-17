@@ -24,7 +24,7 @@ function reply(body: unknown, status = 200) {
 
 const PROMPT = `You are a nutrition assistant. Look at this photo of a meal and list each separate food or drink you can see.
 For each, estimate the eaten amount in grams (or ml for drinks, counted as grams) and its total nutrition for that amount:
-kcal, protein, carbs and fat in grams. Judge portion size from the plate, cutlery, hands or packaging.
+kcal, protein, carbs and fat in grams, plus fiber, sugar (total sugars), sat_fat (saturated fat) and salt in grams. Judge portion size from the plate, cutlery, hands or packaging.
 Include likely cooking oil, butter and sauces when they are visible or typical for the dish.
 Use short, plain English names (e.g. "Grilled chicken breast", "White rice", "Caesar dressing").
 If the photo shows no food, return an empty list and say so in "note".
@@ -44,8 +44,12 @@ const SCHEMA = {
           protein: { type: 'NUMBER' },
           carbs: { type: 'NUMBER' },
           fat: { type: 'NUMBER' },
+          fiber: { type: 'NUMBER' },
+          sugar: { type: 'NUMBER' },
+          sat_fat: { type: 'NUMBER' },
+          salt: { type: 'NUMBER' },
         },
-        required: ['name', 'grams', 'kcal', 'protein', 'carbs', 'fat'],
+        required: ['name', 'grams', 'kcal', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sat_fat', 'salt'],
       },
     },
     note: { type: 'STRING' },
@@ -53,9 +57,10 @@ const SCHEMA = {
   required: ['items', 'note'],
 }
 
-const num = (v: unknown, max: number) => {
+const num = (v: unknown, max: number, decimals = 1) => {
   const n = typeof v === 'number' ? v : parseFloat(String(v))
-  return Number.isFinite(n) ? Math.min(max, Math.max(0, Math.round(n * 10) / 10)) : 0
+  const f = 10 ** decimals
+  return Number.isFinite(n) ? Math.min(max, Math.max(0, Math.round(n * f) / f)) : 0
 }
 
 Deno.serve(async req => {
@@ -108,6 +113,10 @@ Deno.serve(async req => {
       protein: num(i.protein, 500),
       carbs: num(i.carbs, 800),
       fat: num(i.fat, 500),
+      fiber: i.fiber == null ? null : num(i.fiber, 200),
+      sugar: i.sugar == null ? null : num(i.sugar, 800),
+      sat_fat: i.sat_fat == null ? null : num(i.sat_fat, 500),
+      salt: i.salt == null ? null : num(i.salt, 100, 2),
     })).filter((i: { grams: number; kcal: number }) => i.grams > 0 || i.kcal > 0)
     return reply({ items, note: String(parsed?.note ?? '').slice(0, 200), model })
   } catch {

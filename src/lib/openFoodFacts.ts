@@ -1,3 +1,5 @@
+import type { Nutrients } from './types'
+
 /**
  * Look up or search packaged foods in Open Food Facts, the free, open food
  * database (https://world.openfoodfacts.org). Values are per 100 g.
@@ -6,8 +8,8 @@ export interface ScannedProduct {
   barcode: string
   name: string
   brand: string | null
-  /** Per 100 g. Null when the product has no nutrition facts yet. */
-  per100: { kcal: number; protein: number; carbs: number; fat: number } | null
+  /** Per 100 g. Null when the product has no nutrition facts yet. Fibre etc. are null when not on the label. */
+  per100: ({ kcal: number; protein: number; carbs: number; fat: number } & Nutrients) | null
   /** Grams in one serving, if the package says. */
   servingGrams: number | null
   servingLabel: string | null
@@ -19,6 +21,9 @@ const num = (v: unknown): number | null => {
   const n = typeof v === 'string' ? parseFloat(v) : typeof v === 'number' ? v : NaN
   return Number.isFinite(n) && n >= 0 ? n : null
 }
+
+const r1 = (v: number | null) => (v === null ? null : Math.round(v * 10) / 10)
+const r2 = (v: number | null) => (v === null ? null : Math.round(v * 100) / 100)
 
 const FIELDS = 'code,product_name,product_name_nb,product_name_no,product_name_en,brands,serving_size,serving_quantity,nutriments'
 
@@ -32,6 +37,11 @@ function toProduct(barcode: string, p: Record<string, unknown>): ScannedProduct 
     protein: Math.round((num(n.proteins_100g) ?? 0) * 10) / 10,
     carbs: Math.round((num(n.carbohydrates_100g) ?? 0) * 10) / 10,
     fat: Math.round((num(n.fat_100g) ?? 0) * 10) / 10,
+    fiber: r1(num(n.fiber_100g)),
+    sugar: r1(num(n.sugars_100g)),
+    sat_fat: r1(num(n['saturated-fat_100g'])),
+    // EU labels give salt; some products only have sodium (salt = sodium × 2.5).
+    salt: r2(num(n.salt_100g) ?? (num(n.sodium_100g) !== null ? num(n.sodium_100g)! * 2.5 : null)),
   }
   const name = [p.product_name_nb, p.product_name_no, p.product_name, p.product_name_en]
     .find(v => typeof v === 'string' && v.trim()) as string | undefined

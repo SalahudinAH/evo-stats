@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, ChevronLeft, ChevronRight, Footprints, X, GripVertical, Minus, Pencil, Plus, RefreshCw, ScanBarcode, Search, Trash2 } from 'lucide-react'
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, Footprints, X, GripVertical, Minus, Pencil, Plus, RefreshCw, ScanBarcode, Search, Trash2 } from 'lucide-react'
 import type { Nav } from '../App'
-import { MEALS, PhotoNotSetUp, type Api, type Food, type FoodEntry, type Goals, type Meal, type PhotoItem } from '../lib/types'
+import { MEALS, NUTRIENT_KEYS, PhotoNotSetUp, type Api, type NutrientKey, type Nutrients, type Food, type FoodEntry, type Goals, type Meal, type PhotoItem } from '../lib/types'
 import { shrinkPhoto } from '../lib/photo'
 import { useLoad } from '../lib/hooks'
 import { kcalFromMacros, planLabel, scaleMacros } from '../lib/nutrition'
@@ -33,6 +33,7 @@ function mealNow(): Meal {
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
+const round2 = (n: number) => Math.round(n * 100) / 100
 
 export function FoodScreen({ nav }: { nav: Nav }) {
   const [offset, setOffset] = useState(0)
@@ -210,6 +211,7 @@ export function FoodScreen({ nav }: { nav: Nav }) {
           <div><span className="k">Carbs</span><span className="v">{Math.round(total.carbs)}<span> / {g?.carbs ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.carbs, g?.carbs), background: 'var(--carbs)' }} /></span></div>
           <div><span className="k">Fat</span><span className="v">{Math.round(total.fat)}<span> / {g?.fat ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.fat, g?.fat), background: 'var(--fat)' }} /></span></div>
         </div>
+        <MoreNutrients entries={list} />
         {(budget.burn || (budget.on && offset === 0)) && (
           <div className="burn-row">
             <Footprints size={16} strokeWidth={2.2} />
@@ -342,7 +344,7 @@ function ScanResult({ api, foods, code, initial, initialMeal, offset, onClose, o
   }, [code, known, initial])
 
   const num = (s: string) => { const n = parseFloat(s.replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : 0 }
-  const per100 = known ? { kcal: known.kcal, protein: known.protein, carbs: known.carbs, fat: known.fat }
+  const per100 = known ? { kcal: known.kcal, protein: known.protein, carbs: known.carbs, fat: known.fat, ...scaleNutrients(known, 1) }
     : state === 'found' && product?.per100 ? product.per100
     : { kcal: num(form.kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat) }
   const g = num(grams)
@@ -431,6 +433,50 @@ function ScanResult({ api, foods, code, initial, initialMeal, offset, onClose, o
   )
 }
 
+const NUTRIENT_LABEL: Record<NutrientKey, string> = { fiber: 'Fibre', sugar: 'Sugar', sat_fat: 'Saturated fat', salt: 'Salt' }
+const NUTRIENTS_OPEN = 'evo-stats.moreNutrients'
+
+/** Scales fibre, sugar, saturated fat and salt; unknown (null) stays unknown. */
+function scaleNutrients(n: Nutrients, f: number): Nutrients {
+  const out: Nutrients = {}
+  for (const k of NUTRIENT_KEYS) {
+    const v = n[k]
+    out[k] = v === null || v === undefined ? null : Math.round(v * f * (k === 'salt' ? 100 : 10)) / (k === 'salt' ? 100 : 10)
+  }
+  return out
+}
+
+/** "Show more nutrients": the day's fibre, sugar, saturated fat and salt, as on a food label. */
+function MoreNutrients({ entries }: { entries: FoodEntry[] }) {
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem(NUTRIENTS_OPEN) === '1' } catch { return false } })
+  const toggle = () => { setOpen(o => { try { localStorage.setItem(NUTRIENTS_OPEN, o ? '0' : '1') } catch { /* private mode */ } return !o }) }
+  const known = entries.filter(e => NUTRIENT_KEYS.some(k => e[k] !== null && e[k] !== undefined))
+  const sum = (k: NutrientKey) => known.reduce((t, e) => t + (e[k] ?? 0), 0)
+  const missing = entries.length - known.length
+  return (
+    <>
+      <button className="more-nutr-btn" aria-expanded={open} onClick={toggle}>
+        {open ? 'Hide' : 'Show'} more nutrients <ChevronDown size={15} strokeWidth={2.4} style={{ transform: open ? 'rotate(180deg)' : undefined }} />
+      </button>
+      {open && (
+        <div className="more-nutr">
+          <div className="nutr4">
+            {NUTRIENT_KEYS.map(k => (
+              <div key={k}>
+                <span className="k">{NUTRIENT_LABEL[k]}</span>
+                <span className="v">{known.length ? (k === 'salt' ? round2(sum(k)) : round1(sum(k))) : '–'}<span> g</span></span>
+              </div>
+            ))}
+          </div>
+          {missing > 0 && entries.length > 0 && (
+            <p className="tiny muted">Not known for {missing} of {entries.length} foods (typed in by hand or logged before this was added), so the real totals are higher.</p>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
 type PhotoRow = PhotoItem & { key: number; g: string }
 
 /** A meal photo: the AI lists what it sees with grams and macros; you check it, then add it all. */
@@ -464,10 +510,10 @@ function PhotoMeal({ api, photo, meal: initialMeal, offset, onClose, onAdded, on
   // Changing the grams scales the item's calories and macros with it.
   const scaled = (r: PhotoRow) => {
     const f = r.grams > 0 ? num(r.g) / r.grams : 1
-    return { kcal: Math.round(r.kcal * f), protein: round1(r.protein * f), carbs: round1(r.carbs * f), fat: round1(r.fat * f) }
+    return { kcal: Math.round(r.kcal * f), protein: round1(r.protein * f), carbs: round1(r.carbs * f), fat: round1(r.fat * f), ...scaleNutrients(r, f) }
   }
   const kept = rows.filter(r => num(r.g) > 0)
-  const total = kept.reduce((t, r) => { const x = scaled(r); return { kcal: t.kcal + x.kcal, protein: t.protein + x.protein, carbs: t.carbs + x.carbs, fat: t.fat + x.fat } }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
+  const total = kept.reduce((t, r) => { const x = scaled(r); return { kcal: t.kcal + x.kcal, protein: t.protein + x.protein, carbs: t.carbs + x.carbs, fat: t.fat + x.fat } }, { kcal: 0, protein: 0, carbs: 0, fat: 0 } as { kcal: number; protein: number; carbs: number; fat: number })
 
   async function add() {
     if (!kept.length) return
@@ -553,7 +599,7 @@ function PhotoMeal({ api, photo, meal: initialMeal, offset, onClose, onAdded, on
   )
 }
 
-function entryFrom(f: Pick<Food, 'name' | 'serving' | 'kcal' | 'protein' | 'carbs' | 'fat'> & { id?: string }, servings: number, meal: Meal, offset: number) {
+function entryFrom(f: Pick<Food, 'name' | 'serving' | 'kcal' | 'protein' | 'carbs' | 'fat'> & Nutrients & { id?: string }, servings: number, meal: Meal, offset: number) {
   // Logging for an earlier day puts the entry at noon that day.
   const eaten_at = offset === 0 ? undefined : (() => { const d = dayRange(offset).from; d.setHours(12); return d.toISOString() })()
   return {
@@ -564,6 +610,7 @@ function entryFrom(f: Pick<Food, 'name' | 'serving' | 'kcal' | 'protein' | 'carb
     protein: round1(f.protein * servings),
     carbs: round1(f.carbs * servings),
     fat: round1(f.fat * servings),
+    ...scaleNutrients(f, servings),
     meal,
     eaten_at,
   } satisfies Omit<FoodEntry, 'id' | 'eaten_at'> & { eaten_at?: string }

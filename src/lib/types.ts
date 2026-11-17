@@ -105,7 +105,17 @@ export interface Macros {
   fat: number
 }
 
-export interface Food extends Macros {
+/** Grams per serving, as on EU food labels. Null/absent when not known. */
+export interface Nutrients {
+  fiber?: number | null
+  sugar?: number | null
+  sat_fat?: number | null
+  salt?: number | null
+}
+export const NUTRIENT_KEYS = ['fiber', 'sugar', 'sat_fat', 'salt'] as const
+export type NutrientKey = typeof NUTRIENT_KEYS[number]
+
+export interface Food extends Macros, Nutrients {
   id: string
   name: string
   serving: string
@@ -113,7 +123,7 @@ export interface Food extends Macros {
   barcode?: string | null
 }
 
-export interface FoodEntry extends Macros {
+export interface FoodEntry extends Macros, Nutrients {
   id: string
   eaten_at: string
   meal: Meal
@@ -220,7 +230,7 @@ export interface Api {
   estimatePhoto(jpegBase64: string, hint: string): Promise<PhotoEstimate>
 }
 
-export interface PhotoItem { name: string; grams: number; kcal: number; protein: number; carbs: number; fat: number }
+export interface PhotoItem extends Nutrients { name: string; grams: number; kcal: number; protein: number; carbs: number; fat: number }
 export interface PhotoEstimate { items: PhotoItem[]; note: string }
 /** The food-photo function or its Gemini key isn't set up yet. */
 export class PhotoNotSetUp extends Error {}

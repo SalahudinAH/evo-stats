@@ -445,6 +445,13 @@ button.group-row:active, a.group-row:active { background: var(--surface-2); }
 .macro3 .v span { color: var(--muted); font-weight: 400; }
 .macro3 .b { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
 .macro3 .b > span { display: block; height: 100%; }
+.more-nutr-btn { align-self: center; display: inline-flex; align-items: center; gap: 4px; margin: -4px 0 -2px; padding: 4px 8px; border: 0; background: none; color: var(--accent-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.more-nutr { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 0.5px solid var(--line); }
+.nutr4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.nutr4 > div { display: flex; flex-direction: column; gap: 3px; }
+.nutr4 .k { font-size: 12px; color: var(--muted); }
+.nutr4 .v { font-size: 15px; font-weight: 600; }
+.nutr4 .v span { color: var(--muted); font-weight: 400; }
 .dots7 { display: flex; gap: 5px; }
 .dots7 span { width: 8px; height: 8px; border-radius: 4px; background: #3a3a3c; }
 .dots7 span.on { background: var(--accent); }

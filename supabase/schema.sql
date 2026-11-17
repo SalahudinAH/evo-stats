@@ -138,6 +138,19 @@ create table if not exists public.food_entries (
 );
 create index if not exists food_entries_user_time on public.food_entries (user_id, eaten_at);
 
+-- More nutrients, as on every EU food label: fibre, sugar, saturated fat and salt (grams).
+-- Null when not known (typed in by hand, or added before these existed).
+alter table public.foods
+  add column if not exists fiber   numeric(6,1) check (fiber >= 0),
+  add column if not exists sugar   numeric(6,1) check (sugar >= 0),
+  add column if not exists sat_fat numeric(6,1) check (sat_fat >= 0),
+  add column if not exists salt    numeric(6,2) check (salt >= 0);
+alter table public.food_entries
+  add column if not exists fiber   numeric(6,1) check (fiber >= 0),
+  add column if not exists sugar   numeric(6,1) check (sugar >= 0),
+  add column if not exists sat_fat numeric(6,1) check (sat_fat >= 0),
+  add column if not exists salt    numeric(6,2) check (salt >= 0);
+
 -- Daily calorie/macro goals and how many workouts a week you plan.
 create table if not exists public.user_settings (
   user_id           uuid primary key default auth.uid() references auth.users(id) on delete cascade,
