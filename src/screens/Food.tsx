@@ -212,7 +212,7 @@ export function FoodScreen({ nav }: { nav: Nav }) {
           <div><span className="k">Fat</span><span className="v">{Math.round(total.fat)}<span> / {g?.fat ?? '–'} g</span></span><span className="b"><span style={{ width: pct(total.fat, g?.fat), background: 'var(--fat)' }} /></span></div>
         </div>
         <MoreNutrients entries={list} />
-        {(budget.burn || (budget.on && offset === 0)) && (
+        {(budget.burn || offset === 0) && (
           <div className="burn-row">
             <Footprints size={16} strokeWidth={2.2} />
             <span style={{ flex: 1, minWidth: 0 }}>
